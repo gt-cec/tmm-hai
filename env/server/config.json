@@ -1,0 +1,48 @@
+{
+    "logfile" : "app.log",
+    "layouts" : [
+        "RSMM1",
+        "RSMM2",
+        "RSMM3",
+        "RSMM4",
+        "RSMM5",
+        "RSMM6",
+        "marshmallow_experiment", 
+        "marshmallow_experiment_coordination", 
+        "mdp_test"
+    ],
+    "MAX_GAMES" : 10,
+    "MAX_GAME_LENGTH" : 120,
+    "AGENT_DIR" : "./env/server/static/assets/agents",
+    "MAX_FPS" : 10,
+    "psiturk" : {
+        "experimentParams" : {
+            "layouts" : ["counter_circuit", "cramped_room"],
+            "gameTime" : 11,
+            "playerZero" : "human",
+            "playerOne" : "human",
+            "randomized" : true
+        },
+        "lobbyWaitTime" : 300000
+    },
+    "tutorial" : {
+        "tutorialParams" : {
+            "layouts" : ["tutorial_3", "tutorial_2", "tutorial_1", "tutorial_0"],
+            "playerZero" : "human",
+            "playerOne" : "TutorialAI",
+            "phaseTwoScore" : 34
+        },
+        "tomato_value" : 13,
+        "onion_value" : 21
+    },
+    "layout_globals" : {
+        "onion_value" : 1,
+        "tomato_value" : 1,
+        "onion_time" : 500,
+        "tomato_time" : 800,
+        "order_bonus" : 2,
+        "max_num_ingredients" : 3
+    },
+    "visibility": "D",
+    "visibility_range": 4
+}

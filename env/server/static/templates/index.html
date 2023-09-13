@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>CEC Study Platform</title>
+    <link rel="Favicon" href="static/favicon.ico" />
+
+    <script src="static/lib/jquery-min.js" type="text/javascript"> </script>
+    <script src="static/lib/d3.v3.min.js" type="text/javascript"> </script>
+    <script src="static/lib/babel.min.js" type="text/javascript"> </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+    <script src="static/lib/phaser.min.js"></script>
+    <script src="static/js/cookies.js", type="text/javascript"></script>
+    <script src="static/js/graphics.js", type="text/javascript"></script>
+    <script src="static/js/index.js" type="text/javascript"></script>
+    <script src="static/js/log.js" type="text/javascript"></script>
+    <script src="static/js/insitu-questions.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="static/css/style.css" type="text/css" />
+  </head>
+  <body>
+    <!-- top bar -->
+    <div class="top-bar">
+      <div></div>
+      <div id="instructions" class="instructions-box">
+        <div class="instructions" onclick="window.location = './instructions'">INSTRUCTIONS</div>
+      </div>
+      <div class="container-bar">
+        <form id="environment-configure-form">
+          <div class="row">
+            <div class="form-group col-lg-3">
+              <label for="playerZero" style="color:#1E6A9E">Player 1</label>
+              <select id="playerZero" name="playerZero">
+                  {% for agent_name in agent_names %}
+                      <option value={{agent_name}}>{{agent_name}}</option>
+                  {% endfor %}
+                  <option value="human">Human Keyboard Input</option>
+              </select>
+            </div>
+            <div class="form-group col-lg-3">
+              <label for="playerOne" style="color:#44956B">Player 2</label>
+              <select id="playerOne" name="playerOne">
+                  <option value="human">Human Keyboard Input</option>
+                  {% for agent_name in agent_names %}
+                      <option value={{agent_name}}>{{agent_name}}</option>
+                  {% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-lg-3">
+              <label for="layout">Layout</label>
+              <select id="layout" name="layout">
+                  {% for layout in layouts %}
+                      <option value={{layout}}>{{layout}}</option>
+                  {% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-lg-2">
+              <label for="gameTime">Game Time (sec)</label>
+              <input type="number" id="gameTime" value="60" min="1" max="1800" name="gameTime">
+            </div>
+          </div>
+        </form>
+        <div id="experiment-progress-bar">
+          <div class="row flex-center">
+            <div id="stage-intro" class="study-stage">
+              Intro
+            </div>
+            <div class="connector"></div>
+            <div id="stage-practice" class="study-stage">
+              Practice
+            </div>
+            <div class="connector"></div>
+            <div id="stage-round1" class="study-stage">
+              Stage 1
+            </div>
+            <div class="connector"></div>
+            <div id="stage-round2" class="study-stage">
+              Stage 2
+            </div>
+            <div class="connector"></div>
+            <div id="stage-round3" class="study-stage">
+              Stage 3
+            </div>
+            <div class="connector"></div>
+            <div id="stage-round4" class="study-stage">
+              Stage 4
+            </div>
+            <div class="connector"></div>
+            <div id="stage-debrief" class="study-stage">
+              End
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <!-- <button id="leave" style="display:none;">STOP</button> -->
+      </div>
+    </div>
+
+    <div id="overcooked-container">
+      <!-- left content -->
+      <div id="left-panel" class="left-panel">
+        <div id="smm-content" class="smm-content">
+          <b>- Mental Model -</b>
+        </div>
+        <div id="instructions-controls">
+          <img id="left-panel-controls" class="instructions-controls" src="static/images/controls_vert.png">
+        </div>
+      </div>
+      <!-- main content -->
+      <div class="center-panel">
+        <div id="overcooked"></div>
+        <div id="instructions-content" class="instructions-content">
+          <div id="instructions-content-text-top" class="instructions-content-text"></div>
+          <!-- Screening Location -->
+          <div id="screening-location" style="display:none" class="demographics-container">
+            <div id="screening-location-1" class="demographics-button" onclick="recordScreening(this)">USA</div>
+            <div id="screening-location-2" class="demographics-button" onclick="recordScreening(this)">Europe</div>
+            <div id="screening-location-3" class="demographics-button" onclick="recordScreening(this)">Other</div>
+          </div>
+          <!-- Screening Age -->
+          <div id="screening-age" style="display:none" class="demographics-container">
+            <input id="screening-age-input" inputmode="numeric" type="number" class="demographics-input">
+          </div>
+          <!-- Screening Vulnerable -->
+          <div id="screening-vulnerable" style="display:none" class="demographics-container">
+            <div id="screening-vulnerable-1" class="demographics-button" onclick="recordScreening(this)">Yes</div>
+            <div id="screening-vulnerable-2" class="demographics-button" onclick="recordScreening(this)">No</div>
+          </div>
+          <!-- Consent Form -->
+          <div id="consent-form" style="display:none" class="demographics-container">
+            <div id="consent-download" class="demographics-button" onclick="window.open('/consent-form', '_blank')">Download Consent Form</div>
+            <input id="consent-input" style="width: 30rem" type="text" class="demographics-input">
+          </div>
+          <!-- Demographics Gender -->
+          <div id="demographics-gender" style="display:none" class="demographics-container">
+            <div id="demographics-gender-1" class="demographics-button" onclick="recordDemographic(this)">Female</div>
+            <div id="demographics-gender-2" class="demographics-button" onclick="recordDemographic(this)">Male</div>
+            <div id="demographics-gender-3" class="demographics-button" onclick="recordDemographic(this)">Non-Binary</div>
+            <div id="demographics-gender-4" class="demographics-button" onclick="recordDemographic(this)">Prefer not to say</div>
+          </div>
+          <!-- Demographics Gaming -->
+          <div id="demographics-gaming" style="display:none" class="demographics-container">
+            <div id="demographics-gaming-1" class="demographics-button" onclick="recordDemographic(this)">I never play games like this.</div>
+            <div id="demographics-gaming-3" class="demographics-button" onclick="recordDemographic(this)">I have played games like this a few times, but not actively.</div>
+            <div id="demographics-gaming-4" class="demographics-button" onclick="recordDemographic(this)">I used to play games in this genre weekly, but not anymore.</div>
+            <div id="demographics-gaming-6" class="demographics-button" onclick="recordDemographic(this)">I play games in this genre around once a month.</div>
+            <div id="demographics-gaming-7" class="demographics-button" onclick="recordDemographic(this)">I play games in this genre weekly.</div>
+          </div>
+        </div>
+        <br><br>
+        <div id="instructions-buttons" class="instructions-buttons-container">
+          <div id='instructions-back'>
+            <div id="instructions-back-text">
+              Back
+            </div>
+            <div id="instructions-back-bar"></div>
+          </div>
+          <div id='instructions-continue'>
+            <div id="instructions-continue-text">
+              Continue
+            </div>
+            <div id="instructions-continue-bar"></div>
+          </div>
+        </div>
+      </div>
+      <!-- right content -->
+      <div id="right-panel" class="right-panel">
+        <img id="right-panel-instructions" src="static/images/cooking_instructions_vert.png">
+        <div id="insitu-questions-container" class="insitu-questions-container" style="display: none">
+          <div id="insitu-questions-text" class="insitu-questions-text"></div>
+          <div id="insitu-questions-questions-container" class="insitu-questions-questions-container"></div>
+          <div id="insitu-questions-submit" class="insitu-questions-questions-container" style="margin-top:0">
+            <div id='insitu-submit'>
+              <div id="insitu-submit-text" style="text-align:center">
+                Submit
+              </div>
+              <div id="insitu-submit-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <noscript>
+      <h1>Warning: Javascript seems to be disabled</h1>
+      <p>This website requires that Javascript be enabled on your browser.</p>
+      <p>Instructions for enabling Javascript in your browser can be found 
+	<a href="https://support.google.com/answer/23852?hl=en">here</a></p>
+    </noscript>
+
+    <!-- set up the UI panels based on the input parameters -->
+    <script>
+      // set up the URL parameters
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+
+      // pull the relevant parameters
+
+      // study params
+      var studyStages = ["intro", "practice", "round1", "round2", "round3", "round4", "debrief"]
+      let stageCookie = getCookie("lastStage")
+      var studyStage = stageCookie ? stageCookie : "intro-text"  // initial stage of the study
+      var visibilityDots = true  // whether to show visibility dots
+
+      var questionTimeout  // the timeout for asking situation awareness questions, cancel this on game end
+      var inSituQuestions = []  // list of in-situ questions
+      var askedQuestions = []  // list of questions that have been asked
+
+      // user screening params
+      var screeningLocation = ""
+      var screeningLocation = ""
+
+      // init the study stage
+      introduceStage()
+      var paused = false
+
+      // environment setup
+      const setup = urlParams.get('setup')
+      if (setup == null) {  // for use study
+        document.getElementById("environment-configure-form").style.display = "none"
+        document.getElementById("experiment-progress-bar").style.display = "flex"
+        document.getElementById("instructions").style.display = "none"
+      }
+
+      // mental model
+      const smm = urlParams.get('smm')
+      if (smm == null) {
+        document.getElementById("smm-content").style.display = "none"
+      }
+
+      // user ID
+      var userID = urlParams.get('user_id')
+      if (userID == null) {
+        userID = "no ID provided"
+      }
+
+      log({"type": "opened index page"})     
+    </script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+tensorflow==2.0.3
+dill
+Flask
+Flask-SocketIO
+greenlet
+Jinja2
+python-socketio
+requests
+protobuf
