@@ -6,7 +6,7 @@ import os
 
 # All other imports must come after patch to ensure eventlet compatibility
 import pickle, queue, atexit, json, logging, copy, datetime
-from threading import Lock
+from threading import Lock, Event
 from env.server.utils import ThreadSafeSet, ThreadSafeDict
 from flask import Flask, render_template, jsonify, request, send_file
 from flask_socketio import SocketIO, join_room, leave_room, emit, rooms
@@ -18,6 +18,8 @@ import ast
 ###########
 # Globals #
 ###########
+
+thread_event = Event()
 
 smm = None
 paused = False
@@ -52,7 +54,7 @@ USERS = ThreadSafeDict()  # Mapping of users to locks associated with the ID. En
 USER_ROOMS = ThreadSafeDict()  # Mapping of user id's to the current game (room) they are in
 
 GAME_TIME = 0
-LAYOUT = "RSMM"
+LAYOUT = "RSMM1"
 
 # Mapping of string game names to corresponding classes
 GAME_NAME_TO_CLS = {
@@ -94,6 +96,18 @@ def try_create_game(game_name ,**kwargs):
         - Runtime error if server is at max game capacity
         - Propogate any error that occured in game __init__ function
     """
+
+    # remove all previous games
+    thread_event.clear()
+    ids = [x for x in GAMES.keys()]
+    for game_id in ids:
+        # if game_id not in FREE_MAP:
+            # GAMES[game_id].deactivate()
+            # cleanup_game(GAMES[game_id])
+        GAMES[game_id].status = Game.Status.DONE
+        print("REMOVED GAME")
+
+    # create the game
     try:
         curr_id = FREE_IDS.get(block=False)
         assert FREE_MAP[curr_id], "Current id is already in use"
@@ -159,8 +173,6 @@ def get_waiting_game():
         return get_game(waiting_id)
 
 
-
-
 ##########################
 # Socket Handler Helpers #
 ##########################
@@ -216,11 +228,10 @@ def  _leave_game(user_id):
             # Active -> Waiting
             game.deactivate()
             
-            
-
     return was_active
 
 def _create_game(user_id, game_name, params={}, smm=None):
+    global game_thread
     print("Socket Create Game")
     print("_create_game params", params)
     game, err = try_create_game(game_name, **params)
@@ -251,7 +262,8 @@ def _create_game(user_id, game_name, params={}, smm=None):
             WAITING_GAMES.put(game.id)
             socketio.emit('waiting', { "in_game" : True }, room="jack")
 
-    socketio.start_background_task(play_game, game, smm=smm, fps=MAX_FPS)
+    thread_event.set()
+    game_thread = socketio.start_background_task(play_game, game, smm=smm, fps=MAX_FPS)
 
 
 #####################
@@ -308,7 +320,30 @@ def get_agent_names():
 
 @app.route('/')
 def index():
+    # reset all global variables
+    global paused, pause_time, GAMES, ACTIVE_GAMES, WAITING_GAMES, USERS, USER_ROOMS, GAME_TIME, LAYOUT, thread_event, FREE_IDS, FREE_MAP
     print("Opened Index Page")
+    paused = False
+    pause_time = 0
+    thread_event = Event()
+    GAMES = ThreadSafeDict()
+    ACTIVE_GAMES = ThreadSafeSet()
+    WAITING_GAMES = queue.Queue()
+    USERS = ThreadSafeDict()
+    USER_ROOMS = ThreadSafeDict()
+    GAME_TIME = 0
+    LAYOUT = "RSMM1"
+    FREE_IDS = queue.Queue(maxsize=MAX_GAMES)  # Global queue of available IDs. This is how we sync game creation and keep track of how many games are in memory
+    FREE_MAP = ThreadSafeDict()  # Bitmap that indicates whether ID is currently in use. Game with ID=i is "freed" by setting FREE_MAP[i] = True
+
+    # Initialize our ID tracking data
+    for i in range(MAX_GAMES):
+        FREE_IDS.put(i)
+        FREE_MAP[i] = True
+
+    env.server.game._configure(MAX_GAME_LENGTH, AGENT_DIR, CONFIG["visibility"], CONFIG["visibility_range"])
+
+    socketio.emit('end_game', { "status" : Game.Status.DONE }, room="jack")
     agent_names = get_agent_names()
     return render_template('index.html', agent_names=agent_names, layouts=LAYOUTS)
 
@@ -325,8 +360,8 @@ def set_level():
         level = level["level"]
 
     if level == "intro":
-        LAYOUT = "RSMM"
-        GAME_TIME = 90
+        LAYOUT = "RSMM1"
+        GAME_TIME = 30
     elif level == "practice":
         LAYOUT = "RSMM2"
         GAME_TIME = 90
@@ -400,6 +435,8 @@ def on_create(data):
         #defnitely want to change this in the future
         params["mdp_params"] = {"old_dynamics":True}
         params["layout"] = LAYOUT + ".layout"
+        params["layouts"] = [LAYOUT]
+        print("    game layout to " + LAYOUT + ".layout")
         params["gameTime"] = str(GAME_TIME)
         print("Params", params)
         game_name = data.get('game_name', 'overcooked')
@@ -437,7 +474,9 @@ def on_join(data):
                     game.activate()
                     ACTIVE_GAMES.add(game.id)
                     socketio.emit('start_game', { "spectating" : False, "start_info" : game.to_json()}, room="jack")
-                    socketio.start_background_task(play_game, game)
+                    thread_event.set()
+                    global game_thread
+                    game_thread = socketio.start_background_task(play_game, game)
                 else:
                     # Still need to keep waiting for players
                     WAITING_GAMES.put(game.id)
@@ -497,7 +536,7 @@ def on_exit():
 # Game Loop #
 #############
 
-def play_game(game, smm=None, fps=10, visibility="O", visibility_range=100):
+def play_game(game, smm=None, fps=10):
     """
     Asynchronously apply real-time game updates and broadcast state to all clients currently active
     in the game. Note that this loop must be initiated by a parallel thread for each active game
@@ -509,8 +548,7 @@ def play_game(game, smm=None, fps=10, visibility="O", visibility_range=100):
     global pause_time
     status = Game.Status.ACTIVE
     count = 0
-    print(game.get_state())
-    while status != Game.Status.DONE and status != Game.Status.INACTIVE:
+    while status != Game.Status.DONE and status != Game.Status.INACTIVE and thread_event.is_set():
         # hold if paused
         if paused:
             # if just paused, record the pause time
@@ -537,11 +575,11 @@ def play_game(game, smm=None, fps=10, visibility="O", visibility_range=100):
             # log the state
             with open("env/server/logs/user.txt", "a") as f:
                 f.write(str(state) + "\n")
-
+            
             # send the game state to the SMM engine
             if smm is not None:
                 smm.update({k : state[k] for k in state if k not in ["all_orders"]})
-                
+            
             # convert position tuples to strings for nicer formatting, check 3 layers deep
             belief_state = copy.deepcopy(smm.belief_state if smm is not None else {})
             for item in belief_state:
@@ -559,6 +597,7 @@ def play_game(game, smm=None, fps=10, visibility="O", visibility_range=100):
         socketio.sleep(1/fps)
     
     print("End game")
+    thread_event.clear()
     with game.lock:
         data = game.get_data()
         socketio.emit('end_game', { "status" : status, "data" : data }, room="jack")

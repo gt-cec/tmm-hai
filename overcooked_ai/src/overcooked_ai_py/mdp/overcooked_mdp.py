@@ -1396,9 +1396,11 @@ class OvercookedGridworld(object):
 
         for action, action_set in zip(joint_action, self.get_actions(state)):
             if action not in action_set:
-                raise ValueError(
-                    "Illegal action %s in state %s" % (action, state)
-                )
+                # Jack: permitting this as the state machine can throw invalid actions
+                # raise ValueError(
+                    # "Illegal action %s in state %s" % (action, state)
+                # )
+                return state, {"event_infos": None, "sparse_reward_by_agent": [0], "shaped_reward_by_agent": [0]}
 
         new_state = state.deepcopy()
         # Resolve interacts first
@@ -1826,7 +1828,7 @@ class OvercookedGridworld(object):
             else:
                 soup = state.get_object(pot_pos)
                 assert soup.name == "soup", (
-                    "soup at " + pot_pos + " is not a soup but a " + soup.name
+                    "soup at " + str(pot_pos) + " is not a soup but a " + soup.name
                 )
                 if soup.is_ready:
                     pots_states_dict["ready"].append(pot_pos)
@@ -2104,18 +2106,18 @@ class OvercookedGridworld(object):
             c in "XOPDST123456789 " for c in all_elements
         ), "Invalid character in grid"
         assert all_elements.count("1") == 1, "'1' must be present exactly once"
-        assert (
-            all_elements.count("D") >= 1
-        ), "'D' must be present at least once"
+        # assert (  # Jack: removed this as we don't need infinite dishes in our layouts
+        #     all_elements.count("D") >= 1
+        # ), "'D' must be present at least once"
         assert (
             all_elements.count("S") >= 1
         ), "'S' must be present at least once"
         assert (
             all_elements.count("P") >= 1
         ), "'P' must be present at least once"
-        assert (
-            all_elements.count("O") >= 1 or all_elements.count("T") >= 1
-        ), "'O' or 'T' must be present at least once"
+        # assert (  # Jack: removed this as we don't need infinite dishes in our layouts
+            # all_elements.count("O") >= 1 or all_elements.count("T") >= 1
+        # ), "'O' or 'T' must be present at least once"
 
     ################################
     # EVENT LOGGING HELPER METHODS #

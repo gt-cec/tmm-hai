@@ -1,13 +1,14 @@
 {
-    "grid":  """OXXXXXXTXXD
-                P         P
-                D         X
+    "grid":  """XXXXXXXXXXX
+                P  XXXXX  P
+                XX       XX
                 S  2   1  S
-                OXXXXXXXXXT""",
+                XXXXXXXXXXX""",
     "start_all_orders" : [
+        { "ingredients" : ["onion", "onion", "onion"]},
         { "ingredients" : ["tomato", "tomato", "tomato"]},
     ],
-    "tomato_value" : .333,
+    "onion_value" : .333,
     "tomato_value" : .33,
     "cook_time": 50,
     "start_state": {
@@ -26,12 +27,12 @@
             { "position" : (6, 1), "name": "dish"},
             { "position" : (7, 1), "name": "dish"},
 
-            { "position" : (1, 0), "name": "tomato"},
-            { "position" : (2, 0), "name": "tomato"},
-            { "position" : (1, 2), "name": "tomato"},
-            { "position" : (1, 4), "name": "tomato"},
-            { "position" : (2, 4), "name": "tomato"},
-            { "position" : (3, 4), "name": "tomato"},
+            { "position" : (1, 0), "name": "onion"},
+            { "position" : (2, 0), "name": "onion"},
+            { "position" : (1, 2), "name": "onion"},
+            { "position" : (1, 4), "name": "onion"},
+            { "position" : (2, 4), "name": "onion"},
+            { "position" : (3, 4), "name": "onion"},
         ],
         "players": [
             { "position": [5, 3], "orientation": [0, 1], "held_object": None },

@@ -14,8 +14,6 @@ $(window).on('beforeunload', function(){
  * Button click event handlers *
  * * * * * * * * * * * * * * * */
 
-var paused = false
-
 function startGame(layout) {
     if (paused) {
         document.getElementById("create").style.display = "none";
@@ -26,8 +24,8 @@ function startGame(layout) {
         let data = [];
 
         formData.forEach((value, name) => {
-            data.push({ name, value });
-        });
+            data.push({ name, value })
+        })
 
         params = arrToJSON(data)
         params.layouts = [params.layout]
@@ -37,13 +35,20 @@ function startGame(layout) {
             "game_name" : "overcooked",
             "create_if_not_found" : false
         };
-        socket.emit("create", paramsData)
-        
-        // set a timer for showing the questions
-        window.setTimeout(() => {
-
-        }, 5000)
+        socket.emit("create", paramsData)   
+        // starts the in-situ question timeout if not on the intro stage
+        if (studyStage != "intro") {
+            startInSituQuestionTimeout()            
+        }     
     }
+}
+
+function startInSituQuestionTimeout() {
+    // set a timer for showing the questions
+    questionTimeout = window.setTimeout(() => {
+        pause(true)
+        showInSituQuestions()
+    }, 1000 * 30)
 }
 
 /* * * * * * * * * * * * * 
@@ -88,6 +93,8 @@ socket.on('creation_failed', function(data) {
 });
 
 socket.on('start_game', function(data) {
+    paused = false // unpause in case the game is already paused
+
     // Hide game-over and lobby, show game title header
     if (window.intervalID !== -1) {
         clearInterval(window.intervalID);
@@ -165,7 +172,7 @@ socket.on('end_game', function(data) {
     $('#tutorial').show();
     $("#leave").hide();
     $('#leave').attr("disabled", true)
-    
+
     // Game ended unexpectedly
     if (data.status === 'inactive') {
         $('#error-exit').show();
@@ -197,21 +204,29 @@ socket.on('end_lobby', function() {
 
 function enable_key_listener() {
     $(document).on('keydown', function(e) {
+        // ignore if paused
+        if (paused) {
+            return
+        }
         let action = 'STAY'
         switch (e.which) {
             case 37: // left
+            case 65:
                 action = 'LEFT';
                 break;
 
             case 38: // up
+            case 87:
                 action = 'UP';
                 break;
 
             case 39: // right
+            case 68:
                 action = 'RIGHT';
                 break;
 
             case 40: // down
+            case 83:
                 action = 'DOWN';
                 break;
 
@@ -255,13 +270,17 @@ var arrToJSON = function(arr) {
  *  User Study Functions *
  * * * * * * * * * * * * */
 
-async function setStudyStage(s, indicator="") {
-    studyStage = s;
+function highlightStudyStage(s) {
     studyStages.forEach ((i) => {
         s = s.startsWith("practice") ? "practice" : s
         s = s.startsWith("intro") ? "intro" : s
         document.getElementById("stage-" + i).className = i == s ? "study-stage study-stage-active" : "study-stage"
     })
+}
+
+async function setStudyStage(s, indicator="") {
+    studyStage = s;
+    highlightStudyStage(s)
 
     // update the server's level
     let resp = await fetch('/level', {
@@ -290,13 +309,14 @@ async function setStudyStage(s, indicator="") {
 // show the overcooked div
 function showOvercooked() {
     // enable the overcooked div
-    document.getElementById("overcooked").style.display = "flex";
+    document.getElementById("overcooked").style.display = "flex"
     // disable the instructions content div
-    document.getElementById("instructions-content").style.display = "none";
+    document.getElementById("instructions-content").style.display = "none"
     // disable the instructions continue button
-    document.getElementById("instructions-continue").style.display = "none";
-    // enable the right side instructions panel
+    hideInstructionsButtons()
+    // enable the side panels
     document.getElementById("right-panel-instructions").style.display = "flex"
+    document.getElementById("left-panel-controls").style.display = "flex"
 }
 
 // show the instructions div
@@ -304,9 +324,10 @@ function showInstructions(text = "") {
     // hide the demographic divs
     hideDemographics()
     // disable the overcooked div
-    document.getElementById("overcooked").style.display = "none";
+    document.getElementById("overcooked").style.display = "none"
     // disable the right side instructions panel
     document.getElementById("right-panel-instructions").style.display = "none"
+    document.getElementById("left-panel-controls").style.display = "none"
     // enable the instructions content div
     document.getElementById("instructions-content").style.display = "flex";
     document.getElementById("instructions-content").setAttribute("class", "instructions-content")
@@ -320,8 +341,42 @@ function showInstructions(text = "") {
 
 // move on the next stage
 function endStage() {
+    // cancel the SA question timeout
+    if (questionTimeout != undefined) {
+        clearTimeout(questionTimeout)
+    }    
+
+    // hide the in situ questions
+    hideInSituQuestions()
+
+    // update the study stage
+    studyStage = studyStages[studyStages.indexOf(studyStage)+1]
+
+    // set the cookie for the stage ending
+    setCookie("lastStage", studyStage, 30)
+
+    // introduce the next stage
+    introduceStage()
+}
+
+// show instructions to introduce a stage
+function introduceStage() { 
+    highlightStudyStage(studyStage)
+
+    // if device is mobile or tablet, exit
+    if (window.mobileAndTabletCheck()) {
+        showInstructions("Hi! We would love for you to participate in our study, but it looks like you are using a phone or tablet. This study requires a laptop or desktop computer -- you can click below to return to Prolific without penalty.")
+        setInstructionsButtonToContinue(undefined, () => {window.location = "https://app.prolific.com/submissions/complete?cc=CTUREFP5"}, 1)
+        document.getElementById("instructions-continue-text").innerHTML = "End Study"
+    }
+
+    // the beginning of the study
+    if (studyStage == "intro-text") {
+        showIntroductionText()
+    }   
+
     // after the intro stage, give a 20 second break
-    if (studyStage == "intro") {
+    if (studyStage == "practice") {
         // show the instructions
         showInstructions("Well done! Let's do one more practice, try to cook all the soups before time runs out. This time, you will be asked a few questions every 30 seconds.")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_practice.png", "practice")}, 1)
@@ -329,7 +384,7 @@ function endStage() {
     }
 
     // after the practice stage, give a 20 second break
-    if (studyStage == "practice") {
+    if (studyStage == "round1") {
         // show the instructions
         showInstructions("Great! You are ready for the real deal. Let's take a few seconds break and then start the first round!")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round1.png", "round1")}, 1)
@@ -337,7 +392,7 @@ function endStage() {
     }
 
     // after the round1 stage, give a 20 second break
-    if (studyStage == "round1") {
+    if (studyStage == "round2") {
         // show the instructions
         showInstructions("Nice work! Let's take a 30 second break before starting the next round.")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round2")}, 1)
@@ -345,7 +400,7 @@ function endStage() {
     }
 
     // after the round2 stage, give a 20 second break
-    if (studyStage == "round2") {
+    if (studyStage == "round3") {
         // show the instructions
         showInstructions("Nice work! Let's take a 30 second break before starting the next round.")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round3")}, 1)
@@ -353,7 +408,7 @@ function endStage() {
     }
 
     // after the round3 stage, give a 20 second break
-    if (studyStage == "round3") {
+    if (studyStage == "round4") {
         // show the instructions
         showInstructions("Nice work! Let's take a 30 second break before starting the next round.")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round4")}, 1)
@@ -361,10 +416,12 @@ function endStage() {
     }
 
     // after the round4 stage, end the study
-    if (studyStage == "round4") {
+    if (studyStage == "debrief") {
         // show the instructions
-        showInstructions("Nice work! You have completed the study!")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round2")}, 1)
+        showInstructions("And that's all! You have completed our study, thank you so much for your participation!<br><br>We intend to use your responses as a dataset so we can help robots better predict how you perceive your surroundings.<br><br>Thank you again, and please email me at <b>kolb@gatech.edu</b> if you have any questions or experienced issues with this study.<br><br>Also, if you would like to be sent the research papers we plan to publish from this data, let me know :-)<br><br>Click \"End Study\" to return to Prolific.")
+        // set the instruction button to return back to Prolific
+        setInstructionsButtonToContinue(undefined, () => {window.location = "https://app.prolific.com/submissions/complete?cc=C105IU9F"}, 1)
+        document.getElementById("instructions-continue-text").innerHTML = "End Study"
         return
     }
 }
@@ -387,7 +444,7 @@ function recordScreening(obj) {
     else if (obj.id.startsWith("screening-vulnerable"))
         screeningVulnerable = obj.innerHTML
     // log the selection
-    log({"type":"screening", "selection":obj.id, "value": obj.innerHTML})
+    log({"type": "screening", "selection": obj.id, "value": obj.innerHTML})
 }
 
 // reset the object's button background color
@@ -397,7 +454,6 @@ function resetButtons(obj) {
     obj.style.backgroundColor = "lightgreen"
     for (var i in children) {
         if (children[i].id == obj.id) {
-            console.log(i, children)
             children[i].style.backgroundcolor = "lightgreen"
         }
         else if (children[i].className == "demographics-button") {
@@ -408,36 +464,36 @@ function resetButtons(obj) {
 
 // show the welcome text
 function showIntroductionText() {
-    showInstructions("Welcome to our study!<br><br>In this game you are a restaurant chef trying to cook vegetable soups.<br><br>Your goal is to use the ingredients at your disposal to create as many soups as you can within three minutes. If you are familiar with the game Overcooked, this is very similar.<br><br>You have an AI partner that is trying to help you, however they are not very considerate. We need your help to improve the AI's helpfulness!")
-    setInstructionsButtonToContinue(undefined, showInstructions3Text /*showInstructions1Text*/, 1)
+    showInstructions("Welcome to our study!<br><br>In this game you are a restaurant chef trying to cook vegetable soups.<br><br>Your goal is to use the ingredients at your disposal to cook as many soups as you can within three minutes. If you are familiar with the game Overcooked, this is very similar.<br><br>You have an AI partner that is trying to help you, however they are not very considerate. We need your help to improve the AI's helpfulness!")
+    setInstructionsButtonToContinue(undefined, showInstructions1Text, 1)
 }
 
 // show the game instructions "This is your chef"
 function showInstructions1Text() {
-    showInstructions("This is your chef:<br><br><img height='150rem' src='static/images/chef.png'/><br>To play the game, control your chef with the arrow keys or WASD keys.<br><br><img height='200rem' src='static/images/controls.png'/><br>")
+    showInstructions("This is your chef. Cute, right?<br><br><img height='150rem' src='static/images/chef.png'/><br>To play the game, control your chef with the arrow keys or WASD keys.<br><br><img class='instructions-controls-image' src='static/images/controls.png'/><br>")
     setInstructionsButtonToContinue(showIntroductionText, showInstructions2Text, 1)
 }
 
 // show the game instructions "How to make a soup"
 function showInstructions2Text() {
-    showInstructions("Your goal is to cook as many soups as you can! Onions and tomatoes are placed around the kitchen, use them to make soups:<br><br><img width='100%' src='static/images/cooking_instructions.png'/><br><br>Try to cook all the available ingredients!<br><br>If you accidentally pick up an object, you can set it down on an empty counter.")
+    showInstructions("Your goal is to cook as many soups as you can! Onions and tomatoes are placed around the kitchen, use them to make soups:<br><br><img width='100%' src='static/images/cooking_instructions.png'/><br><br>Try to cook all the available ingredients! You can mix and match ingredients in your soups. If you accidentally pick up an object, you can set it down on an empty counter.")
     setInstructionsButtonToContinue(showInstructions1Text, showResearchText, 1)
 }
 
 // show the research overview
 function showResearchText() {
-    showInstructions("As you play the game, the study will pause to ask you questions such as where you think kitchen objects are located.<br><br>On our end, we will use your responses to make the AI agent (and real-life robots) better able to assist people with household tasks.<br><br>We hope you enjoy this study :-)<br><br>- Jack")
+    showInstructions("As you play the game, the study will pause to ask you questions such as where you think kitchen objects are located.<br><br>On our end, we will use your responses to make the AI agent (and real-life robots) better able to assist people with household tasks.<br><br>We hope you enjoy this study :-)<br><br>- Jack<br><br>(PS: you can email me at <b>kolb@gatech.edu</b> if something breaks!)")
     setInstructionsButtonToContinue(showInstructions2Text, showConsent, 1)
 }
 
 // consent
 function showConsent() {
-    showInstructions("Please review the consent form. If you consent to the study, please enter your name in the text box. If not, you can close this tab and return the study.")
+    showInstructions("Please review the consent form. If you consent to the study, please enter your name or Prolific ID in the text box. If not, you can close this tab and return the study.")
     document.getElementById("consent-input").value = ""
     document.getElementById("consent-form").style.display = "flex"
     setInstructionsButtonToContinue(showResearchText, () => {
         // check if a name was given
-        if (document.getElementById("consent-input").value != "") {
+        if (!["", ".", ",", "<", ">", ".."].includes(document.getElementById("consent-input").value.trim())) {
             showScreeningInfo();
         }
         else {
@@ -541,7 +597,7 @@ function showDemographicsGamingText() {
 
 // show the game instructions "Let's try a practice round"
 function showInstructions3Text() {
-    showInstructions("Let's try a practice round! Press 'Continue', take a moment to take in the environment, and then press 'Play'.")
+    showInstructions("Let's try a practice round! Press 'Continue', take a moment to take in the environment, and then press 'Play'.<br><br><b><u>As a reminder, you can mix onions and tomatoes in your soups.</u></b>")
     setInstructionsButtonToContinue(showDemographicsGamingText, () => {previewRound("preview_kitchen_practice.png", "intro")}, 1)
 }
 
@@ -555,6 +611,11 @@ function setInstructionsButtonToPlay(nextStep) {
     setInstructionsButtonLoading(1, () => { 
         document.getElementById("instructions-continue").onclick = nextStep
     })   
+}
+
+function hideInstructionsButtons() {
+    document.getElementById("instructions-continue").style.display = "none";
+    document.getElementById("instructions-back").style.display = "none"
 }
 
 function setInstructionsButtonToContinue(prevStep, nextStep, loadingDuration) {
@@ -595,10 +656,11 @@ function setInstructionsButtonLoading(timeout, after) {
 function previewRound(img, stage) {
     // enable the right side instructions panel
     document.getElementById("right-panel-instructions").style.display = "flex"
+    document.getElementById("left-panel-controls").style.display = "flex"
     // free the instructions content's class
     document.getElementById("instructions-content").setAttribute("class", "")
     // set the game image to show
-    document.getElementById("instructions-content-text-top").innerHTML = "<img src='static/images/" + img + "' width=800px, height=500px />"
+    document.getElementById("instructions-content-text-top").innerHTML = "<img class='preview-round' src='static/images/" + img + "' width=800px, height=500px />"
     setInstructionsButtonToPlay(async () => {
         let layout = await setStudyStage(stage)
         startGame(layout)  // setStudyStage returns the layout, startGame starts the game

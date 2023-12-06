@@ -49,7 +49,7 @@ class SMM:
         for i, a in enumerate(state["state"]["players"]):
             dX = a["position"][0] - agent_position[0]
             dY = a["position"][1] - agent_position[1]
-            if state["state"]["visibility"][o["position"][1]][o["position"][0]]:
+            if state["state"]["visibility"][a["position"][1]][a["position"][0]]:
                 del state["state"]["players"][i]
         
         return state

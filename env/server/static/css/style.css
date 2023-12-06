@@ -141,7 +141,7 @@ div.connector {
 }
 
 div.study-stage-active {
-  background-color: aquamarine;
+  background-color: lightgreen;
 }
 
 div.smm-content {
@@ -241,6 +241,11 @@ div.right-panel {
   width: min-content;
   height: min-content;
   display: flex;
+}
+
+#overcooked.fadeout {
+    opacity: .2;
+    transition: opacity .5s linear;
 }
 
 div.instructions-content {
@@ -570,7 +575,9 @@ div.insitu-questions-container {
   background-color: #f5fcf5;
   box-shadow: 2px 2px 2px grey;
   width: 30rem;
+  margin-left: 5rem;
   flex-direction: column;
+  border: .5rem solid darkred;
 }
 
 div.insitu-questions-questions-container {
@@ -578,12 +585,13 @@ div.insitu-questions-questions-container {
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  margin-top: 10rem;
+  margin-top: 4rem;
+  padding-bottom: 2rem;
 }
 
 div.insitu-questions-question {
   display: flex;
-  width: 70%;
+  width: 80%;
   font-size: 1.5rem;
   background-color: lightblue;
   align-items: center;
@@ -599,6 +607,18 @@ div.insitu-questions-question:hover {
   box-shadow: none;
 }
 
+div.insitu-questions-grid-row {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  width: 100%;
+}
+
+div.insitu-questions-grid-item {
+  flex: 1;
+  margin: 0.5rem;
+}
+
 div.insitu-questions-text {
   display: block;
   font-size: 1.75rem;
@@ -606,4 +626,21 @@ div.insitu-questions-text {
   margin-top: 2rem;
 }
 
+img.instructions-controls {
+  margin-left: 5rem;
+  margin-right: 5rem;
+  padding: 1rem;
+  background-color: white;
+  max-width: 15rem;
+  box-shadow: 2px 2px 2px grey;
+}
+
+img.instructions-controls-image {
+  max-height: 20rem;
+  max-width: 90%;
+}
+
+img.preview-round {
+  box-shadow: 2px 2px 2px grey;
+}
 

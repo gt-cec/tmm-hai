@@ -465,7 +465,6 @@ class StateVisualizer:
         for key, obj in objects.items():
             (x_pos, y_pos) = obj.position
             if obj.name == "soup" and grid[y_pos][x_pos] == POT:
-                print(">>>H", obj.cook_time)
                 if obj._cooking_tick != -1 and (
                     obj._cooking_tick <= obj.cook_time
                     or self.show_timer_when_cooked

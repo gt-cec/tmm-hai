@@ -14,8 +14,8 @@ AGENT_DIR = None
 # Maximum allowable game time (in seconds)
 MAX_GAME_TIME = None
 
-VISIBILITY = "O"
-VISIBILITY_RANGE = 100
+VISIBILITY = "D"
+VISIBILITY_RANGE = 4
 
 def _configure(max_game_time, agent_dir, visibility, visibility_range):
     global AGENT_DIR, MAX_GAME_TIME, VISIBILITY, VISIBILITY_RANGE
@@ -71,8 +71,6 @@ class Game(ABC):
         RESET = 'reset'
         INACTIVE = 'inactive'
         ERROR = 'error'
-
-
 
     def __init__(self, *args, **kwargs):
         """
@@ -212,6 +210,8 @@ class Game(ABC):
             return
         try:
             player_idx = self.players.index(player_id)
+            # Jack: clearing the queue so we can have a lower frame rate
+            self.pending_actions[player_idx].empty()
             self.pending_actions[player_idx].put(action)
         except Full:
             pass
@@ -561,7 +561,6 @@ class OvercookedGame(Game):
         
         self.curr_layout = curr_layout
         self.mdp = OvercookedGridworld.from_layout_name(self.curr_layout, folder=folder, **self.mdp_params)
-        print("LAYOUT", self.mdp.terrain_mtx)
         if self.show_potential:
             self.mp = MotionPlanner.from_pickle_or_compute(self.mdp, counter_goals=NO_COUNTERS_PARAMS)
         self.state = self.mdp.get_standard_start_state()
@@ -852,6 +851,9 @@ class FSMAI():
                         if dist < ingredient_dist:
                             ingredient_dist = dist
                             ingredient_position = item_position
+                # if no ingredients, just stay
+                if ingredient_position is None:
+                    return Action.STAY, None
                 # plan to that ingredient
                 self.path = self.go_to_square(agent_position, ingredient_position)
                 # if the agent is not immediately in front of the ingredient, move to it
@@ -875,6 +877,9 @@ class FSMAI():
                 
                 # find the closest unfull pot
                 pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="unfilled")
+                # if there are no unfilled pots, wait
+                if pot_position is None:
+                    return Action.STAY, None             
                 # plan to that pot
                 self.path = self.go_to_square(agent_position, pot_position)
                 # if the agent is not immediately in front of the ingredient, move to it
@@ -951,6 +956,9 @@ class FSMAI():
 
                 # find the closest complete or cooking pot
                 pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="cooking")
+                # if there are no unfilled pots, wait
+                if pot_position is None:
+                    return Action.STAY, None  
                 # plan to that pot
                 self.path = self.go_to_square(agent_position, pot_position)
                 # if the agent is not immediately in front of the ingredient, move to it

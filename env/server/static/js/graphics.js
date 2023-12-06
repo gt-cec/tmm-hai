@@ -278,8 +278,8 @@ class OvercookedScene extends Phaser.Scene {
             if (!state.objects.hasOwnProperty(objpos)) { continue }
             let obj = state.objects[objpos];
             let [x, y] = obj.position;
-            // ignore if not visible to P2 (index 1) (user)
-            if (!state.visibility[y][x][1]) {
+            // ignore if not visible to P2 (index 1) (user) OR if the game is paused
+            if (!state.visibility[y][x][1] || paused) {
                 continue
             }
             let terrain_type = this.terrain[y][x];
@@ -314,9 +314,9 @@ class OvercookedScene extends Phaser.Scene {
                 }
                 if (show_time) {
                     let timesprite =  this.add.text(
-                        this.tileSize*(x+.5),
+                        this.tileSize*(x+.2),
                         this.tileSize*(y+.6),
-                        String(obj._cooking_tick),
+                        String(obj._cooking_tick + "/50"),
                         {
                             font: "25px Arial",
                             fill: "red",
@@ -385,15 +385,19 @@ class OvercookedScene extends Phaser.Scene {
                         sprites['indicators'][y+","+x] = {objsprite};
                     }
                     // if the square is visible by agent 0, mark blue
-                    if (state.visibility[y][x][0] && state.visibility[y][x][1]) {
-                       sprites['indicators'][y+","+x].objsprite.setFrame(`both-see.png`);
-                    }
-                    else if (state.visibility[y][x][0]) {
-                        sprites['indicators'][y+","+x].objsprite.setFrame(`a0-see.png`);
-                    }
+                    // both see
+                    // if (state.visibility[y][x][0] && state.visibility[y][x][1]) {
+                    //    sprites['indicators'][y+","+x].objsprite.setFrame(`both-see.png`);
+                    // }
+                    // AI sees
+                    // else if (state.visibility[y][x][0]) {
+                        // sprites['indicators'][y+","+x].objsprite.setFrame(`a0-see.png`);
+                    // }
+                    // player sees
                     else if (state.visibility[y][x][1]) {
                         sprites['indicators'][y+","+x].objsprite.setFrame(`a1-see.png`);
                     }
+                    // no one seed
                     else {
                         sprites['indicators'][y+","+x].objsprite.setFrame(`empty.png`);
                     }
@@ -419,7 +423,6 @@ class OvercookedScene extends Phaser.Scene {
             this._drawScore(hud_data.score, sprites, board_height);
         }
         if (typeof(hud_data.potential) !== 'undefined' && hud_data.potential !== null) {
-            console.log(hud_data.potential)
             this._drawPotential(hud_data.potential, sprites, board_height);
         }
         this._drawInstructions(sprites, board_height, width)

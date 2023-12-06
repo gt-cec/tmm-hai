@@ -1,7 +1,12 @@
 {
     "logfile" : "app.log",
     "layouts" : [
-        "RSMM",
+        "RSMM1",
+        "RSMM2",
+        "RSMM3",
+        "RSMM4",
+        "RSMM5",
+        "RSMM6",
         "marshmallow_experiment", 
         "marshmallow_experiment_coordination", 
         "mdp_test"
