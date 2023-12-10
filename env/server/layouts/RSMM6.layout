@@ -27,6 +27,9 @@
             { "position" : (0, 2), "name": "onion"},
             { "position" : (1, 0), "name": "onion"},
             { "position" : (10, 2), "name": "onion"},
+            { "position" : (6, 4), "name": "onion"},
+            { "position" : (7, 4), "name": "onion"},
+            { "position" : (8, 4), "name": "onion"},
         ],
         "players": [
             { "position": [5, 3], "orientation": [0, 1], "held_object": None },

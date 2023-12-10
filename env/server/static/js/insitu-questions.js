@@ -39,7 +39,7 @@ function randomFromList(l) {
 
 // generate the questions to ask the user at each question point
 function generateInSituQuestions() {
-    categories = ["SA1 ingredientloc", "SA1 playerloc", "SA1 potstate", "SA2 playerstate", "SA2 teammatestate", "SA3 playerplan", "SA3 teammateplan", "SA3 numremaining"]
+    categories = ["SA1 playerloc"] //["SA1 ingredientloc", "SA1 playerloc", "SA1 potstate", "SA2 playerstate", "SA2 teammatestate", "SA3 playerplan", "SA3 teammateplan", "SA3 numremaining"]
     ingredients = ["<b style='color:goldenrod'>Onion</b>", "<b style='color:red'>Tomato</b>"]
 
     // generate n questions
@@ -169,7 +169,7 @@ function setInSituQuestion(text, questionType, questions) {
 
         // add a "in the center" option
         centerButton = document.createElement("div")
-        centerButton.setAttribute("class", "insitu-questions-question")
+        centerButton.setAttribute("class", "insitu-questions-question insitu-questions-grid-item")
         centerButton.innerHTML = "Center or In-Between"
         centerButton.onclick = () => {recordInSituResponse(text, "center")}
         centerRow.appendChild(centerButton)

@@ -7,7 +7,7 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
-    <title>Overcooked Demo</title>
+    <title>CEC Study Platform</title>
     <link rel="Favicon" href="static/favicon.ico" />
 
     <script src="static/lib/jquery-min.js" type="text/javascript"> </script>
@@ -198,7 +198,7 @@
       var studyStages = ["intro", "practice", "round1", "round2", "round3", "round4", "debrief"]
       let stageCookie = getCookie("lastStage")
       var studyStage = stageCookie ? stageCookie : "intro-text"  // initial stage of the study
-      var visibilityDots = true  // whether to show visibility dots
+      var visibilityDots = false  // whether to show visibility dots
 
       var questionTimeout  // the timeout for asking situation awareness questions, cancel this on game end
       var inSituQuestions = []  // list of in-situ questions
@@ -230,7 +230,8 @@
       if (userID == null) {
         userID = "no ID provided"
       }
-      
+
+      log({"type": "opened index page"})     
     </script>
   </body>
 </html>

@@ -308,6 +308,7 @@ async function setStudyStage(s, indicator="") {
 
 // show the overcooked div
 function showOvercooked() {
+    log({"type": "show overcooked"})
     // enable the overcooked div
     document.getElementById("overcooked").style.display = "flex"
     // disable the instructions content div
@@ -321,6 +322,7 @@ function showOvercooked() {
 
 // show the instructions div
 function showInstructions(text = "") {
+    log({"type": "show instructions"})
     // hide the demographic divs
     hideDemographics()
     // disable the overcooked div
@@ -341,6 +343,7 @@ function showInstructions(text = "") {
 
 // move on the next stage
 function endStage() {
+    log({"type": "end stage"})
     // cancel the SA question timeout
     if (questionTimeout != undefined) {
         clearTimeout(questionTimeout)
@@ -361,6 +364,7 @@ function endStage() {
 
 // show instructions to introduce a stage
 function introduceStage() { 
+    log({"type": "introduce stage"})
     highlightStudyStage(studyStage)
 
     // if device is mobile or tablet, exit
@@ -379,46 +383,46 @@ function introduceStage() {
     if (studyStage == "practice") {
         // show the instructions
         showInstructions("Well done! Let's do one more practice, try to cook all the soups before time runs out. This time, you will be asked a few questions every 30 seconds.")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_practice.png", "practice")}, 1)
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_practice2.png", "practice")}, 1)
         return
     }
 
     // after the practice stage, give a 20 second break
     if (studyStage == "round1") {
         // show the instructions
-        showInstructions("Great! You are ready for the real deal. Let's take a few seconds break and then start the first round!")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round1.png", "round1")}, 1)
+        showInstructions("Great! You are ready for the real deal. Let's start the first round in a few seconds.")
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round1.png", "round1")}, 20)
         return
     }
 
     // after the round1 stage, give a 20 second break
     if (studyStage == "round2") {
         // show the instructions
-        showInstructions("Nice work! Let's take a 30 second break before starting the next round.")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round2")}, 1)
+        showInstructions("Nice work! Let's pause a few seconds before starting the second round.")
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round2")}, 20)
         return
     }
 
     // after the round2 stage, give a 20 second break
     if (studyStage == "round3") {
         // show the instructions
-        showInstructions("Nice work! Let's take a 30 second break before starting the next round.")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round3")}, 1)
+        showInstructions("You are halfway done! We will pause for a few seconds before starting the next round.")
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round3.png", "round3")}, 20)
         return
     }
 
     // after the round3 stage, give a 20 second break
     if (studyStage == "round4") {
         // show the instructions
-        showInstructions("Nice work! Let's take a 30 second break before starting the next round.")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round4")}, 1)
+        showInstructions("Just one more, as usual we will wait a few seconds before starting the final round.")
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round4.png", "round4")}, 20)
         return
     }
 
     // after the round4 stage, end the study
     if (studyStage == "debrief") {
         // show the instructions
-        showInstructions("And that's all! You have completed our study, thank you so much for your participation!<br><br>We intend to use your responses as a dataset so we can help robots better predict how you perceive your surroundings.<br><br>Thank you again, and please email me at <b>kolb@gatech.edu</b> if you have any questions or experienced issues with this study.<br><br>Also, if you would like to be sent the research papers we plan to publish from this data, let me know :-)<br><br>Click \"End Study\" to return to Prolific.")
+        showInstructions("And that's all! You have completed our study, thank you so much for your participation! We will be using your responses as a dataset to help robots better predict how people perceive your surroundings.<br><br>Thank you again, and please email me at <b>kolb@gatech.edu</b> if you have any questions or experienced issues with this study.<br><br>Also, if you would like to be sent the research papers we plan to publish from this data, let me know :-)<br><br>Click \"End Study\" to return to Prolific.")
         // set the instruction button to return back to Prolific
         setInstructionsButtonToContinue(undefined, () => {window.location = "https://app.prolific.com/submissions/complete?cc=C105IU9F"}, 1)
         document.getElementById("instructions-continue-text").innerHTML = "End Study"
@@ -654,6 +658,7 @@ function setInstructionsButtonLoading(timeout, after) {
 
 // show the round's initial game state
 function previewRound(img, stage) {
+    log({"type": "preview round"})
     // enable the right side instructions panel
     document.getElementById("right-panel-instructions").style.display = "flex"
     document.getElementById("left-panel-controls").style.display = "flex"

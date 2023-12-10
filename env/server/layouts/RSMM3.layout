@@ -27,7 +27,7 @@
             { "position" : (7, 0), "name": "dish"},
 
             { "position" : (2, 0), "name": "onion"},
-            { "position" : (3, 1), "name": "onion"},
+            { "position" : (4, 2), "name": "onion"},
             { "position" : (1, 4), "name": "onion"},
             { "position" : (2, 4), "name": "onion"},
             { "position" : (3, 4), "name": "onion"},

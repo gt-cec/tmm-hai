@@ -8,7 +8,7 @@ import os
 import pickle, queue, atexit, json, logging, copy, datetime
 from threading import Lock, Event
 from env.server.utils import ThreadSafeSet, ThreadSafeDict
-from flask import Flask, render_template, jsonify, request, send_file
+from flask import Flask, render_template, jsonify, request, send_file, send_from_directory
 from flask_socketio import SocketIO, join_room, leave_room, emit, rooms
 from env.server.game import OvercookedGame, Game
 import env.server.game
@@ -41,6 +41,8 @@ PSITURK_CONFIG = json.dumps(CONFIG['psiturk'])  # Default configuration for psit
 TUTORIAL_CONFIG = json.dumps(CONFIG['tutorial'])  # Default configuration for tutorial
 FREE_IDS = queue.Queue(maxsize=MAX_GAMES)  # Global queue of available IDs. This is how we sync game creation and keep track of how many games are in memory
 FREE_MAP = ThreadSafeDict()  # Bitmap that indicates whether ID is currently in use. Game with ID=i is "freed" by setting FREE_MAP[i] = True
+
+USER_ID = "user"
 
 # Initialize our ID tracking data
 for i in range(MAX_GAMES):
@@ -321,8 +323,9 @@ def get_agent_names():
 @app.route('/')
 def index():
     # reset all global variables
-    global paused, pause_time, GAMES, ACTIVE_GAMES, WAITING_GAMES, USERS, USER_ROOMS, GAME_TIME, LAYOUT, thread_event, FREE_IDS, FREE_MAP
-    print("Opened Index Page")
+    global paused, pause_time, GAMES, ACTIVE_GAMES, WAITING_GAMES, USERS, USER_ROOMS, GAME_TIME, LAYOUT, thread_event, FREE_IDS, FREE_MAP, USER_ID
+    USER_ID = request.args.get("user_id")
+    print("Opened Index Page for user " + USER_ID)
     paused = False
     pause_time = 0
     thread_event = Event()
@@ -352,6 +355,12 @@ def download_consent_form():
     print("Downloading consent form")
     return send_file("static/pdf/Consent Form.pdf")
 
+@app.route('/log', methods=["POST"])
+def log():
+    with open("env/server/logs/" + USER_ID + ".txt", "a") as f:
+        f.write(str(request.get_json()) + "\n")
+    return ""
+
 @app.route("/level", methods=["POST"])
 def set_level():
     global LAYOUT, GAME_TIME
@@ -361,24 +370,23 @@ def set_level():
 
     if level == "intro":
         LAYOUT = "RSMM1"
-        GAME_TIME = 30
+        GAME_TIME = 93
     elif level == "practice":
         LAYOUT = "RSMM2"
-        GAME_TIME = 90
+        GAME_TIME = 93
     elif level == "round1":
         LAYOUT = "RSMM3"
-        GAME_TIME = 90
+        GAME_TIME = 93
     elif level == "round2":
         LAYOUT = "RSMM4"
-        GAME_TIME = 90
+        GAME_TIME = 93
     elif level == "round3":
         LAYOUT = "RSMM5"
-        GAME_TIME = 90
+        GAME_TIME = 93
     elif level == "round4":
         LAYOUT = "RSMM6"
-        GAME_TIME = 90
+        GAME_TIME = 93
         
-
     print("Setting level to", level, LAYOUT)
         
     return jsonify({"layout": LAYOUT})
@@ -414,6 +422,10 @@ def debug():
     resp['free_ids'] = free_ids
     resp['free_map'] = free_map
     return jsonify(resp)
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
 #########################
@@ -547,6 +559,7 @@ def play_game(game, smm=None, fps=10):
     """
     global pause_time
     status = Game.Status.ACTIVE
+    old_state = {}
     count = 0
     while status != Game.Status.DONE and status != Game.Status.INACTIVE and thread_event.is_set():
         # hold if paused
@@ -573,12 +586,12 @@ def play_game(game, smm=None, fps=10):
         else:
             state = game.get_state()
             # log the state
-            with open("env/server/logs/user.txt", "a") as f:
+            with open("env/server/logs/" + USER_ID + ".txt", "a") as f:
                 f.write(str(state) + "\n")
             
-            # send the game state to the SMM engine
-            if smm is not None:
-                smm.update({k : state[k] for k in state if k not in ["all_orders"]})
+            # send the game state to the SMM engine, disabled because not running in real time
+            # if smm is not None:
+            #     smm.update({k : state[k] for k in state if k not in ["all_orders"]})
             
             # convert position tuples to strings for nicer formatting, check 3 layers deep
             belief_state = copy.deepcopy(smm.belief_state if smm is not None else {})
