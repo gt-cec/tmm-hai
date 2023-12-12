@@ -325,7 +325,10 @@ def index():
     # reset all global variables
     global paused, pause_time, GAMES, ACTIVE_GAMES, WAITING_GAMES, USERS, USER_ROOMS, GAME_TIME, LAYOUT, thread_event, FREE_IDS, FREE_MAP, USER_ID
     USER_ID = request.args.get("user_id")
-    print("Opened Index Page for user " + USER_ID)
+
+    if USER_ID is None:
+        return "Missing user ID, please reload this page with the user_id parameter"
+
     paused = False
     pause_time = 0
     thread_event = Event()
