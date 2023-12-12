@@ -500,7 +500,7 @@ function showResearchText() {
 
 // consent
 function showConsent() {
-    showInstructions("Please review the consent form. If you consent to the study, please enter your name or Prolific ID in the text box. If not, you can close this tab and return the study with the code <b>CIQE9XIY</b> for no penalty.")
+    showInstructions("Please review the consent form. If you consent to the study, please enter your name or Prolific ID in the text box. If not, you can close this tab and return the study with the code <b style='user-select:default'>CIQE9XIY</b> for no penalty.")
     document.getElementById("consent-input").value = ""
     document.getElementById("consent-form").style.display = "flex"
     setInstructionsButtonToContinue(showResearchText, () => {
@@ -600,7 +600,7 @@ function hideDemographics() {
 // screening: exit on invalid
 function showScreeningExit() {
     // should send a ping to Prolific that this user has been returned
-    showInstructions("We are sorry, but your responses make you ineligible for this study. Thank you for your participation, you can close this tab and return the task with the code <b>CIQE9XIY</b> for no penalty")
+    showInstructions("We are sorry, but your responses make you ineligible for this study. Thank you for your participation, you can close this tab and return the task with the code <b style='user-select:default'>CIQE9XIY</b> for no penalty")
     hideDemographics()
     // disable the instructions continue button
     document.getElementById("instructions-continue").style.display = "none";
