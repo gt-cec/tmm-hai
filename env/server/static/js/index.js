@@ -507,7 +507,7 @@ function showConsent() {
         // check if a name was given
         if (!["", ".", ",", "<", ">", ".."].includes(document.getElementById("consent-input").value.trim())) {
             log({"type": "consent", "selection": "yes"})
-            showScreeningInfo();
+            showDemographicsIntro();
         }
         else {
             log({"type": "consent", "selection": "alert"})
