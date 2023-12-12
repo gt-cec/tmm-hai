@@ -1,4 +1,4 @@
-import copy, json
+import copy, ast
 
 # model imports
 import smm.models.predicates
@@ -33,7 +33,7 @@ class SMM:
     # initializes a belief state from a layout file name
     def init_belief_state_from_file(self, filename:str):
         with open("env/server/layouts/" + filename, "r") as f:
-            layout = json.load(f)
+            layout = ast.literal_eval(f.read())
             self.init_belief_state(layout)
     
     # updates the model by filtering state visibility and shunting over to the model

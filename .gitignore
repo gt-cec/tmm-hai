@@ -6,3 +6,4 @@ node_modules/
 **/master_agents/
 **/.DS_Store/
 env/server/logs/
+app.log

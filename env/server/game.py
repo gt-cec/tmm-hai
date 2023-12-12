@@ -830,212 +830,211 @@ class FSMAI():
         self.state = state
         
         # plan with the FSM
-        match self.fsm_state:
-            case "moving":
-                # if the path if complete (last spot is the goal, which should be on a counter), move on
-                if len(self.path) == 1:
-                    # return to the FSM
-                    self.fsm_state = self.fsm[self.fsm_state_recipe]
+        if self.fsm_state == "moving":
+            # if the path if complete (last spot is the goal, which should be on a counter), move on
+            if len(self.path) == 1:
+                # return to the FSM
+                self.fsm_state = self.fsm[self.fsm_state_recipe]
 
-                # check if the agent is on track
-                if agent_position == self.path[-1]:
-                    self.path.pop()
+            # check if the agent is on track
+            if agent_position == self.path[-1]:
+                self.path.pop()
 
-                # check if player if blocking, if so, choose random direction
-                if self.path[-1] == self.state.players[1].position:
-                    return self.pick_random_direction(state), None
+            # check if player if blocking, if so, choose random direction
+            if self.path[-1] == self.state.players[1].position:
+                return self.pick_random_direction(state), None
 
-                # move to the next position
-                # up (-1 because 0,0 is at the top left)
-                if self.path[-1][1] == agent_position[1]-1 and self.path[-1][0] == agent_position[0]:
-                    return Direction.NORTH, None
-                # right
-                elif self.path[-1][0] == agent_position[0]+1 and self.path[-1][1] == agent_position[1]:
-                    return Direction.EAST, None
-                # down (-1 because 0,0 is at the top left)
-                elif self.path[-1][1] == agent_position[1]+1 and self.path[-1][0] == agent_position[0]:
-                    return Direction.SOUTH, None
-                # left
-                elif self.path[-1][0] == agent_position[0]-1 and self.path[-1][1] == agent_position[1]:
-                    return Direction.WEST, None
-                # if none of these are true, the agent is off course
-                else:
-                    # should reroute in this case
-                    self.fsm_state = self.fsm[self.fsm_state_recipe]
-                    return Action.STAY, None
+            # move to the next position
+            # up (-1 because 0,0 is at the top left)
+            if self.path[-1][1] == agent_position[1]-1 and self.path[-1][0] == agent_position[0]:
+                return Direction.NORTH, None
+            # right
+            elif self.path[-1][0] == agent_position[0]+1 and self.path[-1][1] == agent_position[1]:
+                return Direction.EAST, None
+            # down (-1 because 0,0 is at the top left)
+            elif self.path[-1][1] == agent_position[1]+1 and self.path[-1][0] == agent_position[0]:
+                return Direction.SOUTH, None
+            # left
+            elif self.path[-1][0] == agent_position[0]-1 and self.path[-1][1] == agent_position[1]:
+                return Direction.WEST, None
+            # if none of these are true, the agent is off course
+            else:
+                # should reroute in this case
+                self.fsm_state = self.fsm[self.fsm_state_recipe]
+                return Action.STAY, None
 
-            # 1) goes to nearest ingredient, 2) faces ingredient, 3) picks up ingredient
-            case "get ingredient":
-                # if holding an ingredient, move on
-                if state.players[0].held_object is not None:
-                    self.move_to_next_recipe_state()
-                    return Action.STAY, None
-                
-                # find the closest ingredient
-                ingredient_position = None
-                ingredient_dist = float("inf")
-                for item_position in state.objects:
-                    # check if valid ingredient
-                    if state.objects[item_position].name in ["tomato", "onion"]:
-                        # if dist is closer update the target ingredient
-                        dist = self.h(agent_position, item_position)
-                        if dist < ingredient_dist:
-                            ingredient_dist = dist
-                            ingredient_position = item_position
-                # if no ingredients, just stay
-                if ingredient_position is None:
-                    return Action.STAY, None
-                # plan to that ingredient
-                self.path = self.go_to_square(agent_position, ingredient_position)
-                # if route is blocked, choose a random direction
-                if len(self.path) == 0:
-                    return self.pick_random_direction(state), None
-                # if the agent is not immediately in front of the ingredient, move to it
-                if len(self.path) > 2:
-                    self.fsm_state = "moving"
-                    return Action.STAY, None
-                # if the agent is not facing the ingredient, face it
-                facing = self.facing_square(agent_position, agent_orientation, ingredient_position)
-                if facing != Action.STAY:
-                    return facing, None
-                # if the agent is not holding an ingredient, pick it up
-                elif state.players[0].held_object is None:
-                    return Action.INTERACT, None               
-                
-            # 1) goes to uncooked pot, 2) faces pot, 3) places ingredient in pot
-            case "place in pot":
-                # if not holding an ingredient, move on
-                if state.players[0].held_object is None:
-                    self.move_to_next_recipe_state()
-                    return Action.STAY, None
-                
-                # find the closest unfull pot
-                pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="unfilled")
-                # if there are no unfilled pots, wait
-                if pot_position is None:
-                    return Action.STAY, None             
-                # plan to that pot
-                self.path = self.go_to_square(agent_position, pot_position)
-                # if the path is empty, go a random direction
-                if self.path == []:
-                    return self.pick_random_direction(state), None
-                # if the agent is not immediately in front of the ingredient, move to it
-                if len(self.path) > 2:
-                    self.fsm_state = "moving"
-                    return Action.STAY, None
-                # if the agent is not facing the pot, face it
-                facing = self.facing_square(agent_position, agent_orientation, pot_position)
-                if facing != Action.STAY:
-                    return facing, None
-                # if the agent is holding an ingredient, place it in the pot
-                elif state.players[0].held_object is not None:
-                    return Action.INTERACT, None     
-                
-            # 1) checks if nearest pot is filled
-            case "check pot full":
-                # find the closest pot
-                pot_position = self.get_closest_appliance(agent_position, 'P')
-                pot_states = self.game.mdp.get_pot_states(self.state)
-                # if pot is full, get a plate
-                if pot_position in pot_states["cooking"] or pot_position in pot_states["ready"]:
-                    self.move_to_next_recipe_state()
-                    return Action.STAY, None
-                # otherwise, add another ingredient
-                else:
-                    self.fsm_state_recipe = 0  # 0 : get ingredient
-                    self.fsm_state = self.fsm[self.fsm_state_recipe]
-                    return Action.STAY, None
-                
-            # 1) goes to nearest plate, 2) picks it up
-            case "get plate":
-                # if not holding a plate, move on
-                if state.players[0].held_object is not None and state.players[0].held_object.name == "dish":
-                    self.move_to_next_recipe_state()
-                    return Action.STAY, None
-                
-                # find the closest plate
-                plate_position = None
-                plate_dist = float("inf")
-                for item_position in state.objects:
-                    # check if valid ingredient
-                    if state.objects[item_position].name == "dish":
-                        # if dist is closer update the target plate
-                        dist = self.h(agent_position, item_position)
-                        if dist < plate_dist:
-                            plate_dist = dist
-                            plate_position = item_position
-                if plate_position is None:
-                    return Action.STAY
-                # plan to that plate
-                self.path = self.go_to_square(agent_position, plate_position)
-                # if the agent is not immediately in front of the plate, move to it
-                if len(self.path) > 2:
-                    self.fsm_state = "moving"
-                    return Action.STAY, None
-                # if the agent is not facing the plate, face it
-                facing = self.facing_square(agent_position, agent_orientation, plate_position)
-                if facing != Action.STAY:
-                    return facing, None
-                # if the agent is not holding an plate, pick it up
-                elif state.players[0].held_object is None:
-                    return Action.INTERACT, None      
+        # 1) goes to nearest ingredient, 2) faces ingredient, 3) picks up ingredient
+        if self.fsm_state == "get ingredient":
+            # if holding an ingredient, move on
+            if state.players[0].held_object is not None:
+                self.move_to_next_recipe_state()
+                return Action.STAY, None
+            
+            # find the closest ingredient
+            ingredient_position = None
+            ingredient_dist = float("inf")
+            for item_position in state.objects:
+                # check if valid ingredient
+                if state.objects[item_position].name in ["tomato", "onion"]:
+                    # if dist is closer update the target ingredient
+                    dist = self.h(agent_position, item_position)
+                    if dist < ingredient_dist:
+                        ingredient_dist = dist
+                        ingredient_position = item_position
+            # if no ingredients, just stay
+            if ingredient_position is None:
+                return Action.STAY, None
+            # plan to that ingredient
+            self.path = self.go_to_square(agent_position, ingredient_position)
+            # if route is blocked, choose a random direction
+            if len(self.path) == 0:
+                return self.pick_random_direction(state), None
+            # if the agent is not immediately in front of the ingredient, move to it
+            if len(self.path) > 2:
+                self.fsm_state = "moving"
+                return Action.STAY, None
+            # if the agent is not facing the ingredient, face it
+            facing = self.facing_square(agent_position, agent_orientation, ingredient_position)
+            if facing != Action.STAY:
+                return facing, None
+            # if the agent is not holding an ingredient, pick it up
+            elif state.players[0].held_object is None:
+                return Action.INTERACT, None               
+            
+        # 1) goes to uncooked pot, 2) faces pot, 3) places ingredient in pot
+        if self.fsm_state == "place in pot":
+            # if not holding an ingredient, move on
+            if state.players[0].held_object is None:
+                self.move_to_next_recipe_state()
+                return Action.STAY, None
+            
+            # find the closest unfull pot
+            pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="unfilled")
+            # if there are no unfilled pots, wait
+            if pot_position is None:
+                return Action.STAY, None             
+            # plan to that pot
+            self.path = self.go_to_square(agent_position, pot_position)
+            # if the path is empty, go a random direction
+            if self.path == []:
+                return self.pick_random_direction(state), None
+            # if the agent is not immediately in front of the ingredient, move to it
+            if len(self.path) > 2:
+                self.fsm_state = "moving"
+                return Action.STAY, None
+            # if the agent is not facing the pot, face it
+            facing = self.facing_square(agent_position, agent_orientation, pot_position)
+            if facing != Action.STAY:
+                return facing, None
+            # if the agent is holding an ingredient, place it in the pot
+            elif state.players[0].held_object is not None:
+                return Action.INTERACT, None     
+            
+        # 1) checks if nearest pot is filled
+        if self.fsm_state == "check pot full":
+            # find the closest pot
+            pot_position = self.get_closest_appliance(agent_position, 'P')
+            pot_states = self.game.mdp.get_pot_states(self.state)
+            # if pot is full, get a plate
+            if pot_position in pot_states["cooking"] or pot_position in pot_states["ready"]:
+                self.move_to_next_recipe_state()
+                return Action.STAY, None
+            # otherwise, add another ingredient
+            else:
+                self.fsm_state_recipe = 0  # 0 : get ingredient
+                self.fsm_state = self.fsm[self.fsm_state_recipe]
+                return Action.STAY, None
+            
+        # 1) goes to nearest plate, 2) picks it up
+        if self.fsm_state == "get plate":
+            # if not holding a plate, move on
+            if state.players[0].held_object is not None and state.players[0].held_object.name == "dish":
+                self.move_to_next_recipe_state()
+                return Action.STAY, None
+            
+            # find the closest plate
+            plate_position = None
+            plate_dist = float("inf")
+            for item_position in state.objects:
+                # check if valid ingredient
+                if state.objects[item_position].name == "dish":
+                    # if dist is closer update the target plate
+                    dist = self.h(agent_position, item_position)
+                    if dist < plate_dist:
+                        plate_dist = dist
+                        plate_position = item_position
+            if plate_position is None:
+                return Action.STAY
+            # plan to that plate
+            self.path = self.go_to_square(agent_position, plate_position)
+            # if the agent is not immediately in front of the plate, move to it
+            if len(self.path) > 2:
+                self.fsm_state = "moving"
+                return Action.STAY, None
+            # if the agent is not facing the plate, face it
+            facing = self.facing_square(agent_position, agent_orientation, plate_position)
+            if facing != Action.STAY:
+                return facing, None
+            # if the agent is not holding an plate, pick it up
+            elif state.players[0].held_object is None:
+                return Action.INTERACT, None      
 
-            # 1) goes to nearest cooking or cooked pot, 2) fills the dish
-            case "fill from cooked pot":
-                # if not holding a plate, start over
-                if state.players[0].held_object is None:
-                    self.fsm_state_recipe = 0
-                    self.fsm_state = self.fsm[self.fsm_state_recipe]
-                    return Action.STAY, None
-                
-                # if holding soup, move on
-                if state.players[0].held_object.name == "soup":
-                    self.move_to_next_recipe_state()
-                    return Action.STAY, None
+        # 1) goes to nearest cooking or cooked pot, 2) fills the dish
+        if self.fsm_state == "fill from cooked pot":
+            # if not holding a plate, start over
+            if state.players[0].held_object is None:
+                self.fsm_state_recipe = 0
+                self.fsm_state = self.fsm[self.fsm_state_recipe]
+                return Action.STAY, None
+            
+            # if holding soup, move on
+            if state.players[0].held_object.name == "soup":
+                self.move_to_next_recipe_state()
+                return Action.STAY, None
 
-                # find the closest complete or cooking pot
-                pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="cooking")
-                # if there are no unfilled pots, wait
-                if pot_position is None:
-                    return Action.STAY, None  
-                # plan to that pot
-                self.path = self.go_to_square(agent_position, pot_position)
-                # if the agent is not immediately in front of the ingredient, move to it
-                if len(self.path) > 2:
-                    self.fsm_state = "moving"
-                    return Action.STAY, None
-                # if the agent is not facing the pot, face it
-                facing = self.facing_square(agent_position, agent_orientation, pot_position)
-                if facing != Action.STAY:
-                    return facing, None
-                # if the agent is holding a dish, fill it
-                elif state.players[0].held_object is not None:
-                    return Action.INTERACT, None    
+            # find the closest complete or cooking pot
+            pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="cooking")
+            # if there are no unfilled pots, wait
+            if pot_position is None:
+                return Action.STAY, None  
+            # plan to that pot
+            self.path = self.go_to_square(agent_position, pot_position)
+            # if the agent is not immediately in front of the ingredient, move to it
+            if len(self.path) > 2:
+                self.fsm_state = "moving"
+                return Action.STAY, None
+            # if the agent is not facing the pot, face it
+            facing = self.facing_square(agent_position, agent_orientation, pot_position)
+            if facing != Action.STAY:
+                return facing, None
+            # if the agent is holding a dish, fill it
+            elif state.players[0].held_object is not None:
+                return Action.INTERACT, None    
 
-            # 1) goes to nearest serving station, 2) serves dish
-            case "serve dish":
-                # if not holding a soup, start over
-                if state.players[0].held_object is None or state.players[0].held_object.name != "soup":
-                    self.fsm_state_recipe = 0
-                    self.fsm_state = self.fsm[self.fsm_state_recipe]
-                    return Action.STAY, None
+        # 1) goes to nearest serving station, 2) serves dish
+        if self.fsm_state == "serve dish":
+            # if not holding a soup, start over
+            if state.players[0].held_object is None or state.players[0].held_object.name != "soup":
+                self.fsm_state_recipe = 0
+                self.fsm_state = self.fsm[self.fsm_state_recipe]
+                return Action.STAY, None
 
-                # find the closest serving station
-                serving_position = self.get_closest_appliance(agent_position, 'S')
-                # plan to that station
-                self.path = self.go_to_square(agent_position, serving_position)
-                # if the agent is not immediately in front of the ingredient, move to it
-                if len(self.path) > 2:
-                    self.fsm_state = "moving"
-                    return Action.STAY, None
-                # if the agent is not facing the station, face it
-                facing = self.facing_square(agent_position, agent_orientation, serving_position)
-                if facing != Action.STAY:
-                    return facing, None
-                # if the agent is holding a soup, serve it
-                elif state.players[0].held_object.name == "soup":
-                    return Action.INTERACT, None  
-                
+            # find the closest serving station
+            serving_position = self.get_closest_appliance(agent_position, 'S')
+            # plan to that station
+            self.path = self.go_to_square(agent_position, serving_position)
+            # if the agent is not immediately in front of the ingredient, move to it
+            if len(self.path) > 2:
+                self.fsm_state = "moving"
+                return Action.STAY, None
+            # if the agent is not facing the station, face it
+            facing = self.facing_square(agent_position, agent_orientation, serving_position)
+            if facing != Action.STAY:
+                return facing, None
+            # if the agent is holding a soup, serve it
+            elif state.players[0].held_object.name == "soup":
+                return Action.INTERACT, None  
+            
         print("Escaped from FSM!")
         # [action] = random.sample([Action.STAY, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST, Action.INTERACT], 1)
         return Action.STAY, None
