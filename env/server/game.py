@@ -861,14 +861,14 @@ class FSMAI():
             else:
                 # should reroute in this case
                 self.fsm_state = self.fsm[self.fsm_state_recipe]
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
 
         # 1) goes to nearest ingredient, 2) faces ingredient, 3) picks up ingredient
         if self.fsm_state == "get ingredient":
             # if holding an ingredient, move on
             if state.players[0].held_object is not None:
                 self.move_to_next_recipe_state()
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
             
             # find the closest ingredient
             ingredient_position = None
@@ -892,7 +892,7 @@ class FSMAI():
             # if the agent is not immediately in front of the ingredient, move to it
             if len(self.path) > 2:
                 self.fsm_state = "moving"
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
             # if the agent is not facing the ingredient, face it
             facing = self.facing_square(agent_position, agent_orientation, ingredient_position)
             if facing != Action.STAY:
@@ -906,7 +906,7 @@ class FSMAI():
             # if not holding an ingredient, move on
             if state.players[0].held_object is None:
                 self.move_to_next_recipe_state()
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
             
             # find the closest unfull pot
             pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="unfilled")
@@ -938,19 +938,19 @@ class FSMAI():
             # if pot is full, get a plate
             if pot_position in pot_states["cooking"] or pot_position in pot_states["ready"]:
                 self.move_to_next_recipe_state()
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
             # otherwise, add another ingredient
             else:
                 self.fsm_state_recipe = 0  # 0 : get ingredient
                 self.fsm_state = self.fsm[self.fsm_state_recipe]
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
             
         # 1) goes to nearest plate, 2) picks it up
         if self.fsm_state == "get plate":
             # if not holding a plate, move on
             if state.players[0].held_object is not None and state.players[0].held_object.name == "dish":
                 self.move_to_next_recipe_state()
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
             
             # find the closest plate
             plate_position = None
@@ -985,12 +985,12 @@ class FSMAI():
             if state.players[0].held_object is None:
                 self.fsm_state_recipe = 0
                 self.fsm_state = self.fsm[self.fsm_state_recipe]
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
             
             # if holding soup, move on
             if state.players[0].held_object.name == "soup":
                 self.move_to_next_recipe_state()
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
 
             # find the closest complete or cooking pot
             pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="cooking")
