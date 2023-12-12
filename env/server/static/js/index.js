@@ -574,9 +574,9 @@ function showScreeningVulnerable() {
 
 // demographics: intro
 function showDemographicsIntro() {
-    showInstructions("Great! You are eligible for our study. Next we will ask a few demographics questions.")
+    showInstructions("Great! Next we have a demographic question.")
     hideDemographics()
-    setInstructionsButtonToContinue(showScreeningVulnerable, showDemographics1Text, 1)
+    setInstructionsButtonToContinue(showConsent, showDemographicsGamingText, 1)
 }
 
 // demographics: gender
@@ -610,12 +610,12 @@ function showScreeningExit() {
 function showDemographicsGamingText() {
     showInstructions("What is your experience with fast-paced team coordination video games, for example, Overcooked, League of Legends, Black Ops?")
     document.getElementById("demographics-gaming").style.display = "flex"
-    setInstructionsButtonToContinue(showDemographics1Text, showInstructions3Text, 1)
+    setInstructionsButtonToContinue(showDemographicsIntro, showInstructions3Text, 1)
 }
 
 // show the game instructions "Let's try a practice round"
 function showInstructions3Text() {
-    showInstructions("Let's try a practice round! Press 'Continue', take a moment to take in the environment, and then press 'Play'.<br><br><b><u>As a reminder, you can mix onions and tomatoes in your soups.</u></b>")
+    showInstructions("Awesome! Let's get started with a practice round! Press 'Continue', take a moment to take in the environment, and then press 'Play'.<br><br><b><u>As a reminder, you can mix onions and tomatoes in your soups.</u></b>")
     setInstructionsButtonToContinue(showDemographicsGamingText, () => {previewRound("preview_kitchen_practice.png", "intro")}, 1)
 }
 
