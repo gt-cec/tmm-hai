@@ -3,7 +3,7 @@ var socket = io()
 
 $(document).ready(function(){
     // sending a connect request to the server.
-    socket = io.connect('http://localhost:5000');
+    socket = io.connect('https://grateful-firefly-huge.ngrok-free.app');
 });
 
 $(window).on('beforeunload', function(){
@@ -500,7 +500,7 @@ function showResearchText() {
 
 // consent
 function showConsent() {
-    showInstructions("Please review the consent form. If you consent to the study, please enter your name or Prolific ID in the text box. If not, you can close this tab and return the study.")
+    showInstructions("Please review the consent form. If you consent to the study, please enter your name or Prolific ID in the text box. If not, you can close this tab and return the study with the code <b>CIQE9XIY</b>.")
     document.getElementById("consent-input").value = ""
     document.getElementById("consent-form").style.display = "flex"
     setInstructionsButtonToContinue(showResearchText, () => {
