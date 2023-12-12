@@ -39,7 +39,7 @@ function randomFromList(l) {
 
 // generate the questions to ask the user at each question point
 function generateInSituQuestions() {
-    categories = ["SA1 playerloc"] //["SA1 ingredientloc", "SA1 playerloc", "SA1 potstate", "SA2 playerstate", "SA2 teammatestate", "SA3 playerplan", "SA3 teammateplan", "SA3 numremaining"]
+    categories = ["SA1 ingredientloc", "SA1 playerloc", "SA1 potstate", "SA2 playerstate", "SA2 teammatestate", "SA3 playerplan", "SA3 teammateplan", "SA3 numremaining"]
     ingredients = ["<b style='color:goldenrod'>Onion</b>", "<b style='color:red'>Tomato</b>"]
 
     // generate n questions
@@ -103,7 +103,7 @@ function generateInSituQuestions() {
         else if (category == "SA3 numremaining") {
             questionType = randomFromList(["cancook", "willcomplete"])
             if (questionType == "cancook") {
-                inSituQuestions.push(["How many more soups can be made/delivered, including soups in-progress? Make your best guess.", "multiple choice", ["1 soup", "2 soups", "3 soups", "4+ soups", "No idea"]])
+                inSituQuestions.push(["How many more soups can be made/delivered, including soups in-progress? Make your best guess.", "multiple choice", ["No soups", "1-2 soups", "3-4 soups", "No idea"]])
             }
             else if (questionType == "willcomplete") {
                 inSituQuestions.push(["Do you think your team will complete all the dishes in time?", "multiple choice", ["YES or already complete", "Probably YES", "Not sure", "Probably NO", "Definite NO"]])

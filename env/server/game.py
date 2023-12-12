@@ -431,6 +431,7 @@ class OvercookedGame(Game):
         self.npc_players = set()
         self.visibility = VISIBILITY
         self.visibility_range = VISIBILITY_RANGE
+        self.stage = 0
 
         if randomized:
             random.shuffle(self.layouts)
@@ -597,6 +598,7 @@ class OvercookedGame(Game):
         state_dict['score'] = self.score
         state_dict['state']['visibility'] = self.get_visibility()
         state_dict['time_left'] = max(self.max_time - (time() - self.start_time), 0)
+        state_dict['layout'] = self.curr_layout
         return state_dict
 
     def to_json(self):
@@ -710,6 +712,9 @@ class FSMAI():
         # open space
         if self.game.mdp.terrain_mtx[loc[1]][loc[0]] != ' ':
             return False
+        # player is there
+        if self.state.players[1].position == loc:
+            return False
         return True
     
     # for A*: checks whether a square is valid and adds it to the frontier
@@ -737,6 +742,9 @@ class FSMAI():
             frontier, paths = self.frontier_push((loc[0]+1, loc[1]), goal, frontier, paths, loc)
             frontier, paths = self.frontier_push((loc[0], loc[1]+1), goal, frontier, paths, loc)
             frontier, paths = self.frontier_push((loc[0]-1, loc[1]), goal, frontier, paths, loc)
+        # if no paths to goal, return empty
+        if goal not in paths:
+            return []
         # reconstruct the path
         stone = goal
         path = [goal]
@@ -795,6 +803,25 @@ class FSMAI():
                         appliance_dist = dist
                         appliance_position = position
         return appliance_position
+    
+    # pick a random direction to go
+    def pick_random_direction(self, state):
+        dirs = []
+        # up
+        if self.check_floor([state.player_positions[0][0], state.player_positions[0][1]-1]):
+            dirs.append(Direction.NORTH)
+        # right
+        if self.check_floor([state.player_positions[0][0]+1, state.player_positions[0][1]]):
+            dirs.append(Direction.EAST)
+        # down
+        if self.check_floor([state.player_positions[0][0], state.player_positions[0][1]+1]):
+            dirs.append(Direction.SOUTH)
+        # left
+        if self.check_floor([state.player_positions[0][0]-1, state.player_positions[0][1]]):
+            dirs.append(Direction.WEST)
+        if len(dirs) > 0:
+            return dirs[random.randint(0, len(dirs)-1)]
+        return Action.STAY
 
     # determines the next action
     def action(self, state):
@@ -814,6 +841,10 @@ class FSMAI():
                 if agent_position == self.path[-1]:
                     self.path.pop()
 
+                # check if player if blocking, if so, choose random direction
+                if self.path[-1] == self.state.players[1].position:
+                    return self.pick_random_direction(state), None
+
                 # move to the next position
                 # up (-1 because 0,0 is at the top left)
                 if self.path[-1][1] == agent_position[1]-1 and self.path[-1][0] == agent_position[0]:
@@ -829,9 +860,9 @@ class FSMAI():
                     return Direction.WEST, None
                 # if none of these are true, the agent is off course
                 else:
-                    print("!!! AGENT STUCK, AT", agent_position, "AND TRYING TO GET TO", self.path[-1])
-                    return Action.STAY, None
                     # should reroute in this case
+                    self.fsm_state = self.fsm[self.fsm_state_recipe]
+                    return Action.STAY, None
 
             # 1) goes to nearest ingredient, 2) faces ingredient, 3) picks up ingredient
             case "get ingredient":
@@ -856,6 +887,9 @@ class FSMAI():
                     return Action.STAY, None
                 # plan to that ingredient
                 self.path = self.go_to_square(agent_position, ingredient_position)
+                # if route is blocked, choose a random direction
+                if len(self.path) == 0:
+                    return self.pick_random_direction(state), None
                 # if the agent is not immediately in front of the ingredient, move to it
                 if len(self.path) > 2:
                     self.fsm_state = "moving"
@@ -882,6 +916,9 @@ class FSMAI():
                     return Action.STAY, None             
                 # plan to that pot
                 self.path = self.go_to_square(agent_position, pot_position)
+                # if the path is empty, go a random direction
+                if self.path == []:
+                    return self.pick_random_direction(state), None
                 # if the agent is not immediately in front of the ingredient, move to it
                 if len(self.path) > 2:
                     self.fsm_state = "moving"
@@ -927,6 +964,8 @@ class FSMAI():
                         if dist < plate_dist:
                             plate_dist = dist
                             plate_position = item_position
+                if plate_position is None:
+                    return Action.STAY
                 # plan to that plate
                 self.path = self.go_to_square(agent_position, plate_position)
                 # if the agent is not immediately in front of the plate, move to it
@@ -997,7 +1036,6 @@ class FSMAI():
                 elif state.players[0].held_object.name == "soup":
                     return Action.INTERACT, None  
                 
-
         print("Escaped from FSM!")
         # [action] = random.sample([Action.STAY, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST, Action.INTERACT], 1)
         return Action.STAY, None

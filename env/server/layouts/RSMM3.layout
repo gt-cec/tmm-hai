@@ -1,8 +1,8 @@
 {
     "grid":  """XPXXXXXXXXX
                 X         P
-                XS  XXX  XX
-                X  2   1  X
+                X   XXXX  X
+                XS 2   1  X
                 XXXXXXXXXXX""",
     "start_all_orders" : [
         { "ingredients" : ["tomato", "tomato", "tomato"]},
@@ -22,7 +22,7 @@
 
             { "position" : (3, 0), "name": "dish"},
             { "position" : (4, 4), "name": "dish"},
-            { "position" : (9, 2), "name": "dish"},
+            { "position" : (7, 2), "name": "dish"},
             { "position" : (6, 0), "name": "dish"},
             { "position" : (7, 0), "name": "dish"},
 

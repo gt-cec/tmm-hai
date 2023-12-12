@@ -1,4 +1,4 @@
-import copy
+import copy, json
 
 # model imports
 import smm.models.predicates
@@ -13,6 +13,7 @@ class SMM:
 
         self.belief_state = {}  # the belief state output by the SMM
         self.agent_name = 0
+        self.initialized = False
 
     # loads an initial belief state from a layout dictionary
     def init_belief_state(self, layout:dict):
@@ -27,6 +28,13 @@ class SMM:
                     if obj["name"] == "onion":
                         grid[row] = grid[row][:col] + "o" + grid[row][col+1:]
         self.model.init_belief_state(grid)
+        self.initialized = True
+
+    # initializes a belief state from a layout file name
+    def init_belief_state_from_file(self, filename:str):
+        with open("env/server/layouts/" + filename, "r") as f:
+            layout = json.load(f)
+            self.init_belief_state(layout)
     
     # updates the model by filtering state visibility and shunting over to the model
     def update(self, state):
@@ -42,14 +50,14 @@ class SMM:
         for i, o in enumerate(state["state"]["objects"]):
             dX = o["position"][0] - agent_position[0]
             dY = o["position"][1] - agent_position[1]
-            if state["state"]["visibility"][o["position"][1]][o["position"][0]]:
+            if not state["state"]["visibility"][o["position"][1]][o["position"][0]]:
                 del state["state"]["objects"][i]
         
         # filter out other agents
         for i, a in enumerate(state["state"]["players"]):
             dX = a["position"][0] - agent_position[0]
             dY = a["position"][1] - agent_position[1]
-            if state["state"]["visibility"][a["position"][1]][a["position"][0]]:
+            if not state["state"]["visibility"][a["position"][1]][a["position"][0]]:
                 del state["state"]["players"][i]
         
         return state
