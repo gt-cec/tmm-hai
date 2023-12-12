@@ -389,7 +389,7 @@ function introduceStage() {
     // after the intro stage, give a 20 second break
     if (studyStage == "practice") {
         // show the instructions
-        showInstructions("Well done! Let's do one more practice, try to cook all the soups before time runs out. This time, you will be asked a few questions every 30 seconds.")
+        showInstructions("Well done! Let's do one more practice, try to cook all the soups before time runs out. This time, you will be asked a few questions every 30 seconds. Press \"Continue\", take in in the environment, and then \"Play\"")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_practice2.png", "practice")}, 1)
         return
     }
@@ -397,7 +397,7 @@ function introduceStage() {
     // after the practice stage, give a 20 second break
     if (studyStage == "round1") {
         // show the instructions
-        showInstructions("Great! You are ready for the real deal. Let's start the first round in a few seconds.")
+        showInstructions("Great! You are ready for the real deal. Press \"Continue\", take in the environment, and go for it.")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round1.png", "round1")}, 5)
         return
     }
@@ -421,7 +421,7 @@ function introduceStage() {
     // after the round3 stage, give a 20 second break
     if (studyStage == "round4") {
         // show the instructions
-        showInstructions("Just one more, as usual we will wait a few seconds before starting the final round.")
+        showInstructions("Just one more, you got this!.")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round4.png", "round4")}, 5)
         return
     }
@@ -615,7 +615,7 @@ function showDemographicsGamingText() {
 
 // show the game instructions "Let's try a practice round"
 function showInstructions3Text() {
-    showInstructions("Awesome! Let's get started with a practice round! Press 'Continue', take a moment to take in the environment, and then press 'Play'.<br><br><b><u>As a reminder, you can mix onions and tomatoes in your soups.</u></b>")
+    showInstructions("Awesome! Let's get started with a practice round! Press \"Continue\", take in the environment, and then press \"Play\".<br><br><b><u>As a reminder, you can mix onions and tomatoes in your soups.</u></b>")
     setInstructionsButtonToContinue(showDemographicsGamingText, () => {previewRound("preview_kitchen_practice.png", "intro")}, 1)
 }
 
