@@ -917,7 +917,7 @@ class FSMAI():
             self.path = self.go_to_square(agent_position, pot_position)
             # if the path is empty, go a random direction
             if self.path == []:
-                return self.pick_random_direction(state), None
+                return Action.STAY, None
             # if the agent is not immediately in front of the ingredient, move to it
             if len(self.path) > 2:
                 self.fsm_state = "moving"

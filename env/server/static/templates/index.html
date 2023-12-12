@@ -198,7 +198,7 @@
       var studyStages = ["intro", "practice", "round1", "round2", "round3", "round4", "debrief"]
       let stageCookie = getCookie("lastStage")
       var studyStage = stageCookie ? stageCookie : "intro-text"  // initial stage of the study
-      var visibilityDots = false  // whether to show visibility dots
+      var visibilityDots = true  // whether to show visibility dots
 
       var questionTimeout  // the timeout for asking situation awareness questions, cancel this on game end
       var inSituQuestions = []  // list of in-situ questions
