@@ -500,7 +500,7 @@ function showResearchText() {
 
 // consent
 function showConsent() {
-    showInstructions("Please review the consent form. If you consent to the study, please enter your name or Prolific ID in the text box. If not, you can close this tab and return the study with the code <b style='user-select:text'>CIQE9XIY</b> for no penalty.")
+    showInstructions("Please review the consent form. If you consent to the study, please enter your Prolific ID in the text box. If not, you can close this tab and return the study with the code <b style='user-select:text'>CIQE9XIY</b> for no penalty.")
     document.getElementById("consent-input").value = ""
     document.getElementById("consent-form").style.display = "flex"
     setInstructionsButtonToContinue(showResearchText, () => {
@@ -511,7 +511,7 @@ function showConsent() {
         }
         else {
             log({"type": "consent", "selection": "alert"})
-            alert("If you consent to the study, please enter your name in the text field!")
+            alert("If you consent to the study, please enter your Prolific ID in the text field!")
         }
     }, 1)
 }
