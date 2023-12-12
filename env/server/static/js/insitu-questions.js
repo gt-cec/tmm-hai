@@ -85,11 +85,11 @@ function generateInSituQuestions() {
         }
         // player state
         else if (category == "SA2 playerstate") {
-            inSituQuestions.push(["What are <b style='color:#009966'>YOU</b> doing?", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete"]])
+            inSituQuestions.push(["What are <b style='color:#009966'>YOU</b> doing now?", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete"]])
         }
         // teammate state
         else if (category == "SA2 teammatestate") {
-            inSituQuestions.push(["What is your <b style='color:blue'>TEAMMATE</b> doing in ~10 seconds from now? Make your best guess.", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete", "No idea"]])
+            inSituQuestions.push(["What is your <b style='color:blue'>TEAMMATE</b> doing now? Make your best guess.", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete", "No idea"]])
         }
         // player plan
         else if (category == "SA3 playerplan") {
@@ -97,7 +97,7 @@ function generateInSituQuestions() {
         }
         // teammate plan
         else if (category == "SA3 teammateplan") {
-            inSituQuestions.push(["What will your <b style='color:blue'>TEAMMATE</b> be doing ~10 seconds from now? Make your best guess.", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "No idea"]])
+            inSituQuestions.push(["What will your <b style='color:blue'>TEAMMATE</b> be doing ~10 seconds from now? Make your best guess.", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling", "No idea"]])
         }
         // number of dishes remaining
         else if (category == "SA3 numremaining") {

@@ -270,6 +270,12 @@ var arrToJSON = function(arr) {
  *  User Study Functions *
  * * * * * * * * * * * * */
 
+function setFullscreen() {
+    if (!document.fullscreenElement) {
+        document.getElementsByTagName("html")[0].requestFullscreen()
+    }
+}
+
 function highlightStudyStage(s) {
     studyStages.forEach ((i) => {
         s = s.startsWith("practice") ? "practice" : s
@@ -323,6 +329,7 @@ function showOvercooked() {
 // show the instructions div
 function showInstructions(text = "") {
     log({"type": "show instructions"})
+    setFullscreen()
     // hide the demographic divs
     hideDemographics()
     // disable the overcooked div
@@ -468,12 +475,13 @@ function resetButtons(obj) {
 
 // show the welcome text
 function showIntroductionText() {
-    showInstructions("Welcome to our study!<br><br>In this game you are a restaurant chef trying to cook vegetable soups.<br><br>Your goal is to use the ingredients at your disposal to cook as many soups as you can within three minutes. If you are familiar with the game Overcooked, this is very similar.<br><br>You have an AI partner that is trying to help you, however they are not very considerate. We need your help to improve the AI's helpfulness!")
+    showInstructions("Welcome to our study!<br><br>In this game you are a restaurant chef trying to cook vegetable soups.<br><br>Your goal is to use the ingredients at your disposal to cook as many soups as you can within three minutes. If you are familiar with the game Overcooked, this is very similar.<br><br>You have an AI partner that is trying to help you, however they are not very considerate. We need your help to improve the AI's helpfulness!<br><br><b>This study webpage will automatically make itself fullscreen.</b>")
     setInstructionsButtonToContinue(undefined, showInstructions1Text, 1)
 }
 
 // show the game instructions "This is your chef"
 function showInstructions1Text() {
+    
     showInstructions("This is your chef. Cute, right?<br><br><img height='150rem' src='static/images/chef.png'/><br>To play the game, control your chef with the arrow keys or WASD keys.<br><br><img class='instructions-controls-image' src='static/images/controls.png'/><br>")
     setInstructionsButtonToContinue(showIntroductionText, showInstructions2Text, 1)
 }

@@ -912,7 +912,7 @@ class FSMAI():
             pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="unfilled")
             # if there are no unfilled pots, wait
             if pot_position is None:
-                return Action.STAY, None             
+                return self.pick_random_direction(state), None             
             # plan to that pot
             self.path = self.go_to_square(agent_position, pot_position)
             # if the path is empty, go a random direction
@@ -964,7 +964,7 @@ class FSMAI():
                         plate_dist = dist
                         plate_position = item_position
             if plate_position is None:
-                return Action.STAY
+                return self.pick_random_direction(state)
             # plan to that plate
             self.path = self.go_to_square(agent_position, plate_position)
             # if the agent is not immediately in front of the plate, move to it
@@ -996,7 +996,7 @@ class FSMAI():
             pot_position = self.get_closest_appliance(agent_position, 'P', pot_state="cooking")
             # if there are no unfilled pots, wait
             if pot_position is None:
-                return Action.STAY, None  
+                return self.pick_random_direction(state), None  
             # plan to that pot
             self.path = self.go_to_square(agent_position, pot_position)
             # if the agent is not immediately in front of the ingredient, move to it
@@ -1026,7 +1026,7 @@ class FSMAI():
             # if the agent is not immediately in front of the ingredient, move to it
             if len(self.path) > 2:
                 self.fsm_state = "moving"
-                return Action.STAY, None
+                return self.pick_random_direction(state), None
             # if the agent is not facing the station, face it
             facing = self.facing_square(agent_position, agent_orientation, serving_position)
             if facing != Action.STAY:
@@ -1036,8 +1036,7 @@ class FSMAI():
                 return Action.INTERACT, None  
             
         print("Escaped from FSM!")
-        # [action] = random.sample([Action.STAY, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST, Action.INTERACT], 1)
-        return Action.STAY, None
+        return self.pick_random_direction(state), None
 
     def reset(self):
         pass

@@ -1,9 +1,9 @@
 {
     "grid":  """XXXXXXXXXXX
-                P  XXXXX  P
+                X  XXPXX  X
                 XX       XX
-                S  2   1  S
-                XXXXXXXXXXX""",
+                X  2   1  X
+                XXXXXSXXXXX""",
     "start_all_orders" : [
         { "ingredients" : ["onion", "onion", "onion"]},
         { "ingredients" : ["tomato", "tomato", "tomato"]},
@@ -19,6 +19,9 @@
             { "position" : (7, 4), "name": "tomato"},
             { "position" : (8, 4), "name": "tomato"},
             { "position" : (9, 4), "name": "tomato"},
+            { "position" : (0, 1), "name": "tomato"},
+            { "position" : (10, 1), "name": "tomato"},
+            { "position" : (0, 3), "name": "tomato"},
 
             { "position" : (1, 2), "name": "dish"},
             { "position" : (3, 1), "name": "dish"},

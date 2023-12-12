@@ -201,6 +201,11 @@ class OvercookedScene extends Phaser.Scene {
         sprites['chefs'] =
             typeof(sprites['chefs']) === 'undefined' ? {} : sprites['chefs'];
         for (let pi = 0; pi < state.players.length; pi++) {
+            // if the game is paused
+            if (paused) {
+                continue
+            }
+
             let chef = state.players[pi];
             let [x, y] = chef.position;
             let dir = DIRECTION_TO_NAME[chef.orientation];
