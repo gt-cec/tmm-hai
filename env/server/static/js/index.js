@@ -391,7 +391,7 @@ function introduceStage() {
     if (studyStage == "round1") {
         // show the instructions
         showInstructions("Great! You are ready for the real deal. Let's start the first round in a few seconds.")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round1.png", "round1")}, 10)
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round1.png", "round1")}, 5)
         return
     }
 
@@ -399,7 +399,7 @@ function introduceStage() {
     if (studyStage == "round2") {
         // show the instructions
         showInstructions("Nice work! Let's pause a few seconds before starting the second round.")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round2")}, 10)
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round2.png", "round2")}, 5)
         return
     }
 
@@ -407,7 +407,7 @@ function introduceStage() {
     if (studyStage == "round3") {
         // show the instructions
         showInstructions("You are halfway done! We will pause for a few seconds before starting the next round.")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round3.png", "round3")}, 10)
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round3.png", "round3")}, 5)
         return
     }
 
@@ -415,7 +415,7 @@ function introduceStage() {
     if (studyStage == "round4") {
         // show the instructions
         showInstructions("Just one more, as usual we will wait a few seconds before starting the final round.")
-        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round4.png", "round4")}, 10)
+        setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round4.png", "round4")}, 5)
         return
     }
 
@@ -618,7 +618,7 @@ function setInstructionsButtonToPlay(nextStep) {
     document.getElementById("instructions-continue-bar").style.backgroundColor = "green"
     hideDemographics()
     // init the loading bar
-    setInstructionsButtonLoading(1, () => { 
+    setInstructionsButtonLoading(10, () => { 
         document.getElementById("instructions-continue").onclick = nextStep
     })   
 }
