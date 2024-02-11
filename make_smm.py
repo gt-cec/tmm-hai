@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 G = None  # networkx graph
 node_colors = None  # networkx node colors
+classes = ["pot", "soup", "station", "onion", "tomato", "dish"]
 
 def run_smm(user_id):
     # pull the lines from the log file
@@ -45,8 +46,10 @@ def get_color(name):
         return "red"
     if name == "onion":
         return "orange"
-    if name == "soup":  # dishes are considered soups too, just empty soups
+    if name == "soup":
         return "skyblue"
+    if name == "dish":
+        return "yellow"
     if name == "station":
         return "purple"
     if name == "pot":
@@ -57,6 +60,23 @@ def get_color(name):
         return "green"
     print("NAME", name)
     return "orange"
+
+# get the class encoding
+def get_object_encoding(state, obj):
+    # pot soup station onion tomato isCooking isReady isIdle numIngredients
+    encoding = ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0']
+    # set the class encoding
+    encoding[classes.index(state["objects"][obj]["propertyOf"]["name"])] = '1'
+    # set the property encoding
+    encoding[5] = '1' if state["objects"][obj]["propertyOf"]["isCooking"] else '0'
+    encoding[6] = '1' if state["objects"][obj]["propertyOf"]["isReady"] else '0'
+    encoding[7] = '1' if state["objects"][obj]["propertyOf"]["isIdle"] else '0'
+    encoding[8] = str(get_num_ingredient_list(state, obj))
+    return encoding
+
+# gets the number of ingredients of an object
+def get_num_ingredient_list(state, object_id):
+    return state["objects"][object_id]["propertyOf"]["title"].count(":") + state["objects"][object_id]["propertyOf"]["title"].count("+")
 
 # shows the networkx plot
 def visualize(state):
@@ -122,9 +142,21 @@ def visualize(state):
     node_labels = {obj : obj for obj in G.nodes}
     nx.draw(G, pos, with_labels=True, labels=node_labels, node_size=700, node_color=node_colors, font_size=10, font_color="black", font_weight="bold", edge_color="gray", linewidths=1, alpha=0.7)
 
+    # record the object pairs
+    output = ""
+    for object_from in state["objects"]:
+        object_from_encoding = get_object_encoding(state, object_from)
+        for object_to_and_weight in state["objects"][object_from]["canUseWith"]:
+            object_to = object_to_and_weight[0]
+            object_to_encoding = get_object_encoding(state, object_to)
+            edge_weight = object_to_and_weight[1]
+            output += ",".join(object_from_encoding) + "," + ",".join(object_to_encoding) + "," + str(edge_weight) + "\n"
+
+    with open("./dataset.txt", "a") as f:
+        f.write(output)
+
     # display the plot
     plt.pause(0.1)
-
 
 if __name__ == "__main__":
     run_smm("jack")
