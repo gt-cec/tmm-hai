@@ -8,9 +8,10 @@ class SMM:
     def __init__(self, model:str):
         if model == "predicates":
             self.model = smm.models.predicates.SMMPredicates()
-        if model == "fuzzy":
+        elif model == "fuzzy":
             self.model = smm.models.fuzzy.SMMFuzzy()
-
+        else:
+            raise ValueError("Failed to initialize SMM, model must be 'predicates' or 'fuzzy'")
         self.belief_state = {}  # the belief state output by the SMM
         self.agent_name = 0
         self.initialized = False
@@ -31,8 +32,10 @@ class SMM:
         self.initialized = True
 
     # initializes a belief state from a layout file name
-    def init_belief_state_from_file(self, filename:str):
-        with open("env/server/layouts/" + filename, "r") as f:
+    def init_belief_state_from_file(self, layout:str):
+        if not layout.endswith(".layout"):
+            layout += ".layout"
+        with open("env/server/layouts/" + layout, "r") as f:
             layout = ast.literal_eval(f.read())
             self.init_belief_state(layout)
     

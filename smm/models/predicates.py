@@ -141,7 +141,7 @@ class SMMPredicates:
             pass
 
 
-    def update_domain_knowledge(self, state):
+    def update_domain_knowledge(self, state, debug=False):
         # includes agents, objects, locations, activities,
         # and other domain-specific representations needed to model the task and environment
 
@@ -163,7 +163,7 @@ class SMMPredicates:
                 self.updatePredicate("holding", agent_id, None)
 
         # update objects, using matching
-        matched_ids = self.match_objects(self.domain_knowledge["objects"], state["state"]["objects"])
+        matched_ids = self.match_objects(self.domain_knowledge["objects"], state["state"]["objects"], debug=debug)
 
         for i, object_id in enumerate(matched_ids):
             # if object is on the same tile as an agent, associate the holder
@@ -200,16 +200,18 @@ class SMMPredicates:
                      not self.domain_knowledge["objects"][object_to]["propertyOf"]["isCooking"] and \
                      self.domain_knowledge["objects"][object_to]["propertyOf"]["isReady"] and \
                      self.on_pot(object_to):
-                    #  self.domain_knowledge["objects"][object_to]["propertyOf"]["isIdle"]:
-                    print("Dish can be used with pot", object_from, object_to)
                     self.updatePredicate("canUseWith", object_from, [object_to, 1])
+                    if debug:
+                        print("Dish can be used with pot", object_from, object_to)
                 # soups can be used on stations
                 elif self.domain_knowledge["objects"][object_from]["propertyOf"]["name"] == "soup" and \
                      len(self.get_ingredient_list(object_from)) == 3 and \
                      self.domain_knowledge["objects"][object_from]["propertyOf"]["isReady"] and \
                      self.domain_knowledge["objects"][object_to]["propertyOf"]["name"] == "station":
-                    print("Soup can be used with station", object_from, object_to)
                     self.updatePredicate("canUseWith", object_from, [object_to, 1])
+                    if debug:
+                        print("Soup can be used with station", object_from, object_to)
+
                 # by default, cannot use
                 else:
                     self.updatePredicate("canUseWith", object_from, [object_to, 0])
@@ -231,13 +233,14 @@ class SMMPredicates:
     # inputs:
     #   known_objects: list of known objects from the last time step
     #   objects: list of observed objects
+    #   debug: whether to print debug statements
     # returns a list of known object IDs associated with each object, or the new IDs for each object
-    def match_objects(self, known_objects, objects):
-        return self.closest_matching(known_objects, objects)
+    def match_objects(self, known_objects, objects, debug=False):
+        return self.closest_matching(known_objects, objects, debug=debug)
     
 
     # object matching by the closest match algorithm
-    def closest_matching(self, known_objects, objects):
+    def closest_matching(self, known_objects, objects, debug=False):
         # ignore invisible (discarded) objects
         known_objects = {k : known_objects[k] for k in known_objects if known_objects[k]["visible"]}
         
@@ -245,7 +248,8 @@ class SMMPredicates:
         ids = [None for _ in objects]  # object index to known object name so we can match objects -> known object name
         completed_matches = [None for _ in known_objects]  # known object index to object index so we can match known object name[known object index] -> object index
 
-        print("Known Objects:", [known_objects[k]["propertyOf"]["title"] for k in known_objects])
+        if debug:
+            print("Known Objects:", [known_objects[k]["propertyOf"]["title"] for k in known_objects])
 
         # the naive case: objects have exact name/location matches, does not work for moved or transformed objects
         for i, o in enumerate(objects):
@@ -269,18 +273,20 @@ class SMMPredicates:
                         # ignore if this object has ingredients and the known one does not
                         if ":" not in known_objects[k]["propertyOf"]["title"] and "_ingredients" in o:
                             continue
-                        if "_ingredients" in o and ":" in known_objects[k]["propertyOf"]["title"]:
+                        if debug and "_ingredients" in o and ":" in known_objects[k]["propertyOf"]["title"]:
                             print("soup", known_objects[k]["propertyOf"]["title"].split(":")[1].split("+"), [x["name"] for x in o["_ingredients"]])
                         if "_ingredients" in o and ":" in known_objects[k]["propertyOf"]["title"] and known_objects[k]["propertyOf"]["title"].split(":")[1].split("+") != [x["name"] for x in o["_ingredients"]]:
-                            print("XXX soups don't match", known_objects[k]["propertyOf"]["title"].split(":")[1].split("+"), "of known", [x["name"] for x in o["_ingredients"]])
+                            if debug:
+                                print("XXX soups don't match", known_objects[k]["propertyOf"]["title"].split(":")[1].split("+"), "of known", [x["name"] for x in o["_ingredients"]])
                             continue
-                        elif "_ingredients" in o:
+                        elif "_ingredients" in o and debug:
                             print("    Naive case: soups match, known", known_objects[k], "and seen object", o)
                     ids[i] = k
                     completed_matches[known_object_names.index(known_objects[k]["propertyOf"]["id"])] = i
                     break
 
-        print("Seen Objects:", [o["name"] + (":" + "+".join([x["name"] for x in o["_ingredients"]]) if "_ingredients" in o else "") for o in objects])
+        if debug:
+            print("Seen Objects:", [o["name"] + (":" + "+".join([x["name"] for x in o["_ingredients"]]) if "_ingredients" in o else "") for o in objects])
 
         unmatched_seen_objects = [(i, objects[i]) for i, x in enumerate(ids) if x is None]  # seen objects that have not been matched
         unmatched_known_objects = [(i, x) for i, x in enumerate(known_objects) if completed_matches[i] is None and known_objects[x]["propertyOf"]["name"] not in ["pot", "station"] and known_objects[x]]  # known objects that have not been matched
@@ -288,13 +294,16 @@ class SMMPredicates:
         # the next case, match items that are held by other objects (e.g., soup to dish)
         for o in unmatched_seen_objects:
             if "holder" in o[1] and o[1]["holder"] is not None:
-                print("Found unmatched held object", o[0], o[1]["name"], "will try to match to known previously held object")
+                if debug:
+                    print("Found unmatched held object", o[0], o[1]["name"], "will try to match to known previously held object")
                 for k in unmatched_known_objects:
                     if "holder" in known_objects[k[1]]["propertyOf"] and o[1]["holder"] == known_objects[k[1]]["propertyOf"]["holder"]:
-                        print("    Found a match! Linking object", o, "to known object", known_objects[k[1]]["propertyOf"]["title"])
+                        if debug:
+                            print("    Found a match! Linking object", o, "to known object", known_objects[k[1]]["propertyOf"]["title"])
                         # if linking soup to a held dish, link the dish to the soup
                         if o[1]["name"].startswith("soup") and known_objects[k[1]]["propertyOf"]["name"] == "dish":
-                            print("        dish!", known_objects[k[1]], o[1])
+                            if debug:
+                                print("        dish!", known_objects[k[1]], o[1])
                             completed_matches[k[0]] = o[0]  # the dish is part of the soup
                             self.updatePredicate("visible", k[1], False)  # hide the dish       
                         # otherwise link 1-1
@@ -306,7 +315,8 @@ class SMMPredicates:
         unmatched_seen_objects = [(i, objects[i]) for i, x in enumerate(ids) if x is None]  # seen objects that have not been matched
         unmatched_known_objects = [(i, x) for i, x in enumerate(known_objects) if completed_matches[i] is None and known_objects[x]["propertyOf"]["name"] not in ["pot", "station"] and known_objects[x]]  # known objects that have not been matched
         
-        print("unmatched seen", unmatched_seen_objects)
+        if debug:
+            print("unmatched seen", unmatched_seen_objects)
 
         # the next cases will repeat until all moved objects have a match
         while len([x for x in ids if x is None]) > 0:
@@ -331,7 +341,8 @@ class SMMPredicates:
                         continue
                     # if soup, ignore if ingredients are different
                     if known_objects[k]["propertyOf"]["name"] == "soup":
-                        print("SOUP", known_objects[k]["propertyOf"]["title"], "object is", o["name"])
+                        if debug:
+                            print("SOUP", known_objects[k]["propertyOf"]["title"], "object is", o["name"])
                         # ignore if known object has ingredients and this one does not
                         if ":" in known_objects[k]["propertyOf"]["title"] and "_ingredients" not in o:
                             continue
@@ -346,7 +357,7 @@ class SMMPredicates:
                     if dist < closest_k_dist:
                         closest_k = known_objects[k]["propertyOf"]["id"]  # known object name
                         closest_k_dist = dist
-                        if known_objects[k]["propertyOf"]["name"] == "tomato":
+                        if debug and known_objects[k]["propertyOf"]["name"] == "tomato":
                             print("    matched tomato known", k, "object", o)
 
                 # if no close matches, continue
@@ -363,14 +374,16 @@ class SMMPredicates:
                 if len(matches[m]) == 1:
                     ids[matches[m][0][1]] = m  # ids[object index] = known object name
                     completed_matches[known_object_names.index(m)] = matches[m][0][1]  # completed_matches[known object index] = object index
-                    print("1-1 MATCH obj name", objects[matches[m][0][1]]["name"], "to known", m, "of name", known_objects[m]["propertyOf"]["name"], "at", known_objects[m]["at"])
                     hadChange = True
+                    if debug:
+                        print("1-1 MATCH obj name", objects[matches[m][0][1]]["name"], "to known", m, "of name", known_objects[m]["propertyOf"]["name"], "at", known_objects[m]["at"])
                 if len(matches[m]) > 1:
                     min_idx = min(matches[m], key = lambda x : x[0])[1]
                     ids[min_idx] = m 
                     completed_matches[known_object_names.index(m)] = matches[m][0][1]
-                    print("N-1 Match obj name", objects[matches[m][0][1]]["name"], "to known", m, "of name", known_objects[m]["propertyOf"]["name"], "at", known_objects[m]["at"])
                     hadChange = True
+                    if debug:
+                        print("N-1 Match obj name", objects[matches[m][0][1]]["name"], "to known", m, "of name", known_objects[m]["propertyOf"]["name"], "at", known_objects[m]["at"])
         
             # if no changes to environment, exit and register new objects
             if not hadChange:
@@ -380,8 +393,9 @@ class SMMPredicates:
         unmatched_seen_objects = [(i, objects[i]) for i, x in enumerate(ids) if x is None]  # seen objects that have not been matched
         unmatched_known_objects = [(i, x) for i, x in enumerate(known_objects) if completed_matches[i] is None and known_objects[x]["propertyOf"]["name"] not in ["pot", "station"] and known_objects[x]]  # known objects that have not been matched
 
-        print("UNMATCHED SEEN", unmatched_seen_objects)
-        print("UNMATCHED KNOWN", [(x[0], x[1], known_objects[x[1]]["propertyOf"]["title"]) for x in unmatched_known_objects])
+        if debug:
+            print("UNMATCHED SEEN", unmatched_seen_objects)
+            print("UNMATCHED KNOWN", [(x[0], x[1], known_objects[x[1]]["propertyOf"]["title"]) for x in unmatched_known_objects])
 
         # check for ingredients that have become soups
         transformed_ingredients = []
@@ -400,7 +414,8 @@ class SMMPredicates:
                         known_objects[k[1]]["propertyOf"]["name"] in [x["name"] for x in o[1]["_ingredients"]]:
 
                         self.updatePredicate("contains", k[1], o[0])
-                        print("    I believe object", k[1], known_objects[k[1]]["propertyOf"]["name"], "has become a soup", o)
+                        if debug:
+                            print("    I believe object", k[1], known_objects[k[1]]["propertyOf"]["name"], "has become a soup", o)
                         # set the ingredient to invisible
                         self.updatePredicate("visible", k[1], False)
                         # "remove" the ingredient by setting its known object link to the soup
@@ -410,13 +425,15 @@ class SMMPredicates:
                         for _k in unmatched_known_objects:
                             if known_objects[_k[1]]["at"] == o[1]["position"]:
                                 no_soup = False
-                                print("        Soup at", o[1]["position"], "already exists! From known", known_objects[_k[1]])
+                                if debug:
+                                    print("        Soup at", o[1]["position"], "already exists! From known", known_objects[_k[1]])
                                 # "remove" the soup by setting its known object link to the soup
                                 completed_matches[_k[0]] = o[0]
                                 ids[o[0]] = _k[1]
                                 break
                         if no_soup:
-                            print("        Adding a new object to ids slot", o[0], "of", known_objects[_k[1]])
+                            if debug:
+                                print("        Adding a new object to ids slot", o[0], "of", known_objects[_k[1]])
                             ids[o[0]] = o[1]
                             completed_matches[k[0]] = o[0]
 
@@ -425,7 +442,9 @@ class SMMPredicates:
                         break
 
         unmatched_known_objects = [(i, x) for i, x in enumerate(known_objects) if completed_matches[i] is None and known_objects[x]["propertyOf"]["name"] not in ["pot", "station"] and known_objects[x]]  # known objects that have not been matched
-        print("[After ingredient transform] Umatched Known Objects", [(x[0], x[1], known_objects[x[1]]["propertyOf"]["title"]) for x in unmatched_known_objects])
+
+        if debug:
+            print("[After ingredient transform] Umatched Known Objects", [(x[0], x[1], known_objects[x[1]]["propertyOf"]["title"]) for x in unmatched_known_objects])
 
         # check for dishes that have been turned into soups
         for k in unmatched_known_objects:
@@ -433,13 +452,13 @@ class SMMPredicates:
             if known_objects[k[1]]["propertyOf"]["name"] == "dish" and known_objects[k[1]]["propertyOf"]["holder"] is not None:
                 # if there is a full soup that is supposed to be on that spot
                 for o in objects:
-                    print("####", o)
-                    if o["name"] == "soup" and self.get_ingredient_list(o["id"]) == 3 and o["at"] == known_objects[k[1]]["at"]:
-                        print("LIEKLY DISH TO SOUP!!!")
+                    if debug and o["name"] == "soup" and self.get_ingredient_list(o["id"]) == 3 and o["at"] == known_objects[k[1]]["at"]:
+                        print("LIKELY DISH TO SOUP!!!")
 
         unmatched_known_objects = [(i, x) for i, x in enumerate(known_objects) if completed_matches[i] is None and known_objects[x]["propertyOf"]["name"] not in ["pot", "station"] and known_objects[x]]  # known objects that have not been matched
-        print("[After dish transform] Umatched Known Objects", [(x[0], x[1], known_objects[x[1]]["propertyOf"]["title"]) for x in unmatched_known_objects])
-
+        
+        if debug:
+            print("[After dish transform] Umatched Known Objects", [(x[0], x[1], known_objects[x[1]]["propertyOf"]["title"]) for x in unmatched_known_objects])
 
         # check for soups that have been turned in to the station, hide them
         for k in unmatched_known_objects:  # for each unmatched known object
@@ -448,9 +467,10 @@ class SMMPredicates:
                 # assign the object to any station
                 for k2 in known_objects:
                     if known_objects[k2]["propertyOf"]["name"] == "station":
-                        print("moving soup to station", k[1], k2)
                         self.updatePredicate("at", k[1], known_objects[k2]["at"])
                         self.updatePredicate("visible", k[1], False)
+                        if debug:
+                            print("moving soup to station", k[1], k2)
                         break
         
         known_objects = {k : known_objects[k] for k in known_objects if known_objects[k]["visible"]}  # ignore invisible (discarded) objects
@@ -458,8 +478,9 @@ class SMMPredicates:
 
         # register unassigned objects as new
         for l in [(i, objects[i]) for i, x in enumerate(ids) if x is None]:
-            print("adding new object", l[0], l[1])
             ids[l[0]] = l[1]
+            if debug:
+                print("adding new object", l[0], l[1])
 
         return ids
 
