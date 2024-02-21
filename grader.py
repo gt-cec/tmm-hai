@@ -3,9 +3,11 @@
 import ast  # for converting log line to dictionary
 import re  # for removing HTML tags from question strings
 import smm.smm  # for constructing the ground truth SMM (logical predicates with full observability)
+import make_smm  # for visualizing the SMM
 
 # mapping from layouts to round
 rounds = {
+    "RSMM3": 1,
     "RSMM4": 2,
     "RSMM5": 3,
     "RSMM6": 4,
@@ -13,7 +15,7 @@ rounds = {
 }
 
 INGREDIENTS = ["onion", "tomato"]
-LOCATION = ["top right", "top center-right", "top center", "top center-left", "top left", "center right", "center center-right", "center center", "center", "center-ish", "center center-left", "center left", "bottom right", "bottom center-right", "bottom center", "bottom center-left", "bottom left", "left half", "right half", "none available"]
+LOCATION = ["top right", "top center-right", "top center", "top center-left", "top left", "center right", "center center-right", "center center", "center", "center-ish", "center center-left", "center left", "bottom right", "bottom center-right", "bottom center", "bottom center-left", "bottom left", "left half", "right half", "none available", "no idea"]
 RECIPE = ["getting ingredient for pot", "getting dish for soup", "bringing soup to station", "idling, all soups complete", "no idea"]
 PLAYER_STATUS = ["getting ingredient for pot", "getting dish for soup", "bringing soup to station", "exploring kitchen", "idling, all soups complete", "not sure yet"]
 POT_FULL = ["empty", "1-2 ingredients", "3 ingredients (full/cooking)", "no idea"]
@@ -38,7 +40,7 @@ def clean_question_string(text):
     return re.sub(clean, '', text).lower()
 
 # processes a user's logs to determine their accuracy
-def grade_user(user:str, round:int):
+def grade_user(user:str, round:int, debug=False):
     # get the layout from the round
     layout = [x for x in rounds if rounds[x] == round]
     layout = None if len(layout) == 0 else layout[0]
@@ -46,16 +48,24 @@ def grade_user(user:str, round:int):
         raise ValueError("Provided round is not valid! Rounds are: " + ",".join([x for x in rounds]))
     
     responses = {}  # record of the user's question responses: dict{question:[user response, ground truth response, score]}
-    
+
     # process the user
     user.replace(".txt", "").replace(".log", "")  # remove the extension
     with open("env/server/logs/" + user + ".txt", "r") as f:
+        print("Now processing user", user, "round", round)
         lines = f.readlines()  # read every line of the log
+        num_lines = len(lines)
         state = None  # the current game state
         smm_ground_truth = smm.smm.SMM("predicates")  # logical predicates SMM using full observability, represents ground truth
         score = 0
         num_questions = 0
+        line_count = 1
         for line in lines:
+            # keep track of progress
+            if line_count % 100 == 0 and smm_ground_truth.initialized:
+                print("    ", int(100 * line_count / num_lines), "%", "[", user,"]")
+            line_count += 1
+
             log_dict = ast.literal_eval(line)
             # handle state updates
             if "state" in log_dict:
@@ -64,8 +74,8 @@ def grade_user(user:str, round:int):
                     continue
                 if not smm_ground_truth.initialized:  # initialize the ground truth SMM if it has not been initialized
                     smm_ground_truth.init_belief_state_from_file(layout)
-                smm_ground_truth.update(log_dict)
-            
+                smm_ground_truth.update(log_dict, debug=debug)
+
             if not smm_ground_truth.initialized:
                 continue
 
@@ -86,8 +96,8 @@ def grade_user(user:str, round:int):
                         num_questions += 1
                         if question not in responses:  # ensure the question is in the seen responses
                             responses[question] = []
-                        responses[question].append([user_response, ground_truth_response, _score])  # add the record for the question
-    print("Score:", score, "/", num_questions)
+                        responses[question].append([user_response, ground_truth_response, _score, smm_ground_truth.belief_state])  # add the record for the question
+    print("User:", user, "Round", round, "Score:", score, "/", num_questions)
     return responses, score, num_questions
 
 # score a question's response between 0 (incorrect) and 1 (correct)
@@ -304,26 +314,21 @@ def get_future_action_semantic(smm:smm.smm.SMM, object:str)->str:
 
 # get the number of soups that can be made
 def get_remaining_soups(smm:smm.smm.SMM)->str:
-    # get number of ingredients on counters
-    ingredients_on_counters = len([obj for obj in smm.belief_state["objects"] if smm.belief_state["objects"][obj]["propertyOf"]["name"] in INGREDIENTS])
-    # get number of soups on counters (only complete soups have + in the name)
-    soups_on_counters = len([obj for obj in smm.belief_state["objects"] if "+" in smm.belief_state["objects"][obj]["propertyOf"]["name"]])
-    # get number of ingredients held by players
-    ingredients_held = len(["" for agent in smm.belief_state["agents"] if smm.belief_state["agents"][agent]["holding"] is not None and smm.belief_state["objects"][smm.belief_state["agents"][agent]["holding"]]["propertyOf"]["name"] in INGREDIENTS])
-    # get number of soups held by players (only complete soups have + in the name)
-    soups_held = len(["" for agent in smm.belief_state["agents"] if smm.belief_state["agents"][agent]["holding"] is not None and "+" in smm.belief_state["objects"][smm.belief_state["agents"][agent]["holding"]]["propertyOf"]["name"]])
-    # get number of ingredients in pots that are not cooking
-    ingredients_in_uncooked_pot = sum([len(smm.belief_state["objects"][obj]["contains"]) for obj in smm.belief_state["objects"] if smm.belief_state["objects"][obj]["propertyOf"]["name"] == "pot" and not smm.belief_state["objects"][obj]["propertyOf"]["isReady"]])
-    # get number of pots that have completed cooking
-    num_cooked_pots = len(["" for obj in smm.belief_state["objects"] if smm.belief_state["objects"][obj]["propertyOf"]["name"] == "pot" and smm.belief_state["objects"][obj]["propertyOf"]["isCooking"] or smm.belief_state["objects"][obj]["propertyOf"]["isReady"]])
+    objects = get_visible_objects(smm)
+    # get number of ingredients on counters and held (working)
+    ingredients_on_counters = len([obj for obj in objects if smm.belief_state["objects"][obj]["propertyOf"]["name"] in INGREDIENTS])
+    # get number of soups on counters (only complete soups have + in the name), the -1 is to ignore the "soup" prefix
+    soups_on_counters = sum([len(smm.belief_state["objects"][obj]["propertyOf"]["title"].replace(":", "+").split("+"))-1 for obj in objects if "+" in smm.belief_state["objects"][obj]["propertyOf"]["title"] or ":" in smm.belief_state["objects"][obj]["propertyOf"]["title"]])
     # number of soups are: ingredients on counters/3 + ingredients held/3 + ingredients in uncooked pot/3 + number of filled cooking/cooked pot + number of carried soups + number of soups on counter
-    remaining = int(ingredients_on_counters / 3 + ingredients_held / 3 + ingredients_in_uncooked_pot / 3 + num_cooked_pots + soups_held + soups_on_counters)  # the int() will floor the result
+    remaining = int(ingredients_on_counters / 3 + soups_on_counters / 3)  # the int() will floor the result
     return str(remaining) + " soups"
 
 # get whether an ingredient is available
 def get_ingredient_available(smm:smm.smm.SMM, ingredient:str)->str:
+    print(">>>", len([obj for obj in smm.belief_state["objects"] if ingredient in smm.belief_state["objects"][obj]["propertyOf"]["name"]]))
+    input()
     ingredient_available = len([obj for obj in smm.belief_state["objects"] if ingredient in smm.belief_state["objects"][obj]["propertyOf"]["name"]]) > 0
-    return str(ingredient_available)
+    return str(ingredient_available).lower()
 
 # get the status of a pot
 def get_pot_status(smm:smm.smm.SMM, side:str, knowledge:str)->str:
@@ -335,23 +340,32 @@ def get_pot_status(smm:smm.smm.SMM, side:str, knowledge:str)->str:
     # find the target pot (leftmost or rightmost)
     target_pot = None
     for obj in smm.belief_state["objects"]:
+        if smm.belief_state["objects"][obj]["propertyOf"]["name"] != "pot":  # ignore everything but pots
+            continue
         if target_pot is None or (side == "left" and smm.belief_state["objects"][obj]["at"][0] < smm.belief_state["objects"][target_pot]["at"][0]):
             target_pot = obj
         elif target_pot is None or (side == "right" and smm.belief_state["objects"][obj]["at"][0] > smm.belief_state["objects"][target_pot]["at"][0]):
             target_pot = obj
     # if we are looking for the status of the pot
     if knowledge == "state":
-        if smm.belief_state["objects"][target_pot]["propertyOf"]["isReady"]:
+        ing = [x for x in smm.belief_state["objects"] if x != target_pot and smm.belief_state["objects"][x]["visible"] and tuple(smm.belief_state["objects"][x]["at"]) == tuple(smm.belief_state["objects"][target_pot]["at"])]
+        num_ingredients = 0 if len(ing) == 0 else len(smm.belief_state["objects"][ing[0]]["propertyOf"]["title"].split("+"))
+        if num_ingredients == 0:
+            return "empty"
+        elif smm.belief_state["objects"][ing[0]]["propertyOf"]["isReady"]:
             return "finished cooking"
         # if the pot is currently cooking
-        elif smm.belief_state["objects"][target_pot]["propertyOf"]["isCooking"]:
+        elif smm.belief_state["objects"][ing[0]]["propertyOf"]["isCooking"]:
             return "cooking"
+        elif num_ingredients < 3:
+            return "1-2 ingredients"
         else:
-            return "1-2 ingredients" if len(smm.belief_state["objects"][target_pot]["contains"]) > 0 else "empty"
+            raise ValueError("Unsure how this many ingredients were not handled: num ingredients in pot: " + str(num_ingredients) + " state " + str(smm.belief_state["objects"][ing[0]]))
     # if we are looking for the number of ingredients 
     elif knowledge == "full":
-        "Empty", "1-2 ingredients", "3 ingredients (full/cooking)",
-        num_ingredients = len(smm.belief_state["objects"][target_pot]["contains"])
+        # get ingredients on this pot
+        ing = [x for x in smm.belief_state["objects"] if x != target_pot and smm.belief_state["objects"][x]["visible"] and tuple(smm.belief_state["objects"][x]["at"]) == tuple(smm.belief_state["objects"][target_pot]["at"])]
+        num_ingredients = 0 if len(ing) == 0 else len(smm.belief_state["objects"][ing[0]]["propertyOf"]["title"].split("+"))
         if num_ingredients == 0:
             return "Empty"
         elif num_ingredients < 3:
@@ -361,3 +375,10 @@ def get_pot_status(smm:smm.smm.SMM, side:str, knowledge:str)->str:
 
     # otherwise, return the number of ingredients in the pot
     return str(len(smm.belief_state["objects"][target_pot]["contains"]))
+
+# utility function to get visible smm objects
+def get_visible_objects(smm, only_ingredients=False):
+    obj = [x for x in smm.belief_state["objects"] if smm.belief_state["objects"][x]["visible"]]
+    if only_ingredients:
+        obj = [x for x in obj if smm.belief_state["objects"][x]["propertyOf"]["name"] in INGREDIENTS]
+    return obj

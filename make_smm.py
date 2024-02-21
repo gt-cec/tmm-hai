@@ -8,8 +8,15 @@ import matplotlib.pyplot as plt
 G = None  # networkx graph
 node_colors = None  # networkx node colors
 classes = ["pot", "soup", "station", "onion", "tomato", "dish"]
+rounds = {
+    "RSMM3": 1,
+    "RSMM4": 2,
+    "RSMM5": 3,
+    "RSMM6": 4,
+    "RSMM7": 5,
+}
 
-def run_smm(user_id):
+def run_smm(user_id, round):
     # pull the lines from the log file
     with open("env/server/logs/" + user_id + ".txt", "r") as f:
         lines = f.readlines()
@@ -29,13 +36,20 @@ def run_smm(user_id):
         if "stage" in state:
             continue
 
+        # ignore incorrect rounds
+        if "layout" not in state or state["layout"] not in rounds or rounds[state["layout"]] != round:  # ignore if incorrect layout/round
+            continue
+
+        print("-----------------------------------")
+
         # make sure the model is initialized
         if not model.initialized:
             model.init_belief_state_from_file(state["layout"] + ".layout")
 
         # update the smm
-        model.update(state)
+        model.update(state, debug=True)
         visualize(model.belief_state)
+        input()
 
     # keep the plot visible
     plt.show()
@@ -88,6 +102,8 @@ def visualize(state):
         # add the nodes
         G.add_nodes_from(state["objects"].keys())
         G.add_nodes_from(state["agents"].keys())
+
+    print("VISUALIZE BELIEF STATE OBJECTS", [(state["objects"][x]["propertyOf"]["name"], state["objects"][x]["at"]) for x in state["objects"] if state["objects"][x]["propertyOf"]["name"] in ["tomato", "onion"]])
 
     # update the nodes
     for obj in state["objects"]:
@@ -152,11 +168,11 @@ def visualize(state):
             edge_weight = object_to_and_weight[1]
             output += ",".join(object_from_encoding) + "," + ",".join(object_to_encoding) + "," + str(edge_weight) + "\n"
 
-    with open("./dataset.txt", "a") as f:
+    with open("./dataset.txt", "a+") as f:
         f.write(output)
 
     # display the plot
     plt.pause(0.1)
 
 if __name__ == "__main__":
-    run_smm("jack")
+    run_smm("64776e3beba1085215214ec0", 1)

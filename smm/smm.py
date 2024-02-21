@@ -40,10 +40,10 @@ class SMM:
             self.init_belief_state(layout)
     
     # updates the model by filtering state visibility and shunting over to the model
-    def update(self, state):
+    def update(self, state, debug=False):
         state = copy.deepcopy(state)
         state = self.filter_visibility(state)
-        self.belief_state = self.model.update(state)
+        self.belief_state = self.model.update(state, debug=debug)
 
     # filter out objects and agents that are not immediately visible
     def filter_visibility(self, state):
