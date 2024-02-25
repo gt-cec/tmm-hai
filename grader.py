@@ -56,7 +56,9 @@ def grade_user(user:str, round:int, debug=False):
         lines = f.readlines()  # read every line of the log
         num_lines = len(lines)
         state = None  # the current game state
-        smm_ground_truth = smm.smm.SMM("predicates")  # logical predicates SMM using full observability, represents ground truth
+        smm_ground_truth = smm.smm.SMM("predicates", visibility="O99")  # logical predicates SMM using full observability, represents ground truth
+        smm_agent = smm.smm.SMM("predicates", visibility="O99")  # logical predicates SMM for the agent, uses the visible ground truth data
+        smm_user = smm.smm.SMM("predicates", visibility="D4")  # logical predicates SMM for the user, uses the agent's belief
         score = 0
         num_questions = 0
         line_count = 1
@@ -72,9 +74,18 @@ def grade_user(user:str, round:int, debug=False):
                 state = log_dict  # pull the state
                 if state["layout"] != layout:  # ignore if incorrect layout
                     continue
-                if not smm_ground_truth.initialized:  # initialize the ground truth SMM if it has not been initialized
+
+                # initialize the SMMs if they have not been initialized
+                if not smm_ground_truth.initialized:
                     smm_ground_truth.init_belief_state_from_file(layout)
-                smm_ground_truth.update(log_dict, debug=debug)
+                if not smm_agent.initialized:
+                    smm_agent.init_belief_state_from_file(layout)
+                if not smm_user.initialized:
+                    smm_user.init_belief_state_from_file(layout)
+
+                observed_state = smm_ground_truth.convert_log_to_state(state)
+                smm_ground_truth.update(state=observed_state, debug=False)  # update the ground truth SMM
+                smm_agent.update(state=smm_ground_truth.belief_state, debug=debug)  # update the agent's SMM from the ground truth
 
             if not smm_ground_truth.initialized:
                 continue
@@ -246,10 +257,10 @@ def answer_question(smm:smm.smm.SMM, question):
 # get location semantic, e.g., "tomato" could return "top left".
 def get_location_semantic(smm:smm.smm.SMM, object:str)->str:
     position = None
-    user_position = smm.belief_state["agents"]["A0"]["at"]
+    user_position = smm.belief_state["agents"]["A0"]["position"]
     # get the position of the AI teammate
     if object == "teammate":
-        position = smm.belief_state["agents"]["A1"]["at"]
+        position = smm.belief_state["agents"]["A1"]["position"]
     # get the position of the player
     if object == "player":
         position = user_position
@@ -260,10 +271,10 @@ def get_location_semantic(smm:smm.smm.SMM, object:str)->str:
         for obj in smm.belief_state["objects"]:
             # ignore incorrect ingredients
             if smm.belief_state["objects"][obj]["propertyOf"]["name"] == object:
-                dist = (smm.belief_state["objects"][obj]["at"][0] - user_position[0]) ** 2 + (smm.belief_state["objects"][obj]["at"][1] - user_position[1]) ** 2
+                dist = (smm.belief_state["objects"][obj]["position"][0] - user_position[0]) ** 2 + (smm.belief_state["objects"][obj]["position"][1] - user_position[1]) ** 2
                 if dist < closest_ingredient_dist:
                     closest_ingredient_dist = dist
-                    closest_ingredient_position = smm.belief_state["objects"][obj]["at"]
+                    closest_ingredient_position = smm.belief_state["objects"][obj]["position"]
         # error if there are no ingredients of that type
         if closest_ingredient_position is None:
             raise ValueError("Tried to get the location of the closest ingredient " + object + ", however there were no ingredients of that type!")
@@ -325,8 +336,6 @@ def get_remaining_soups(smm:smm.smm.SMM)->str:
 
 # get whether an ingredient is available
 def get_ingredient_available(smm:smm.smm.SMM, ingredient:str)->str:
-    print(">>>", len([obj for obj in smm.belief_state["objects"] if ingredient in smm.belief_state["objects"][obj]["propertyOf"]["name"]]))
-    input()
     ingredient_available = len([obj for obj in smm.belief_state["objects"] if ingredient in smm.belief_state["objects"][obj]["propertyOf"]["name"]]) > 0
     return str(ingredient_available).lower()
 
@@ -342,13 +351,13 @@ def get_pot_status(smm:smm.smm.SMM, side:str, knowledge:str)->str:
     for obj in smm.belief_state["objects"]:
         if smm.belief_state["objects"][obj]["propertyOf"]["name"] != "pot":  # ignore everything but pots
             continue
-        if target_pot is None or (side == "left" and smm.belief_state["objects"][obj]["at"][0] < smm.belief_state["objects"][target_pot]["at"][0]):
+        if target_pot is None or (side == "left" and smm.belief_state["objects"][obj]["position"][0] < smm.belief_state["objects"][target_pot]["position"][0]):
             target_pot = obj
-        elif target_pot is None or (side == "right" and smm.belief_state["objects"][obj]["at"][0] > smm.belief_state["objects"][target_pot]["at"][0]):
+        elif target_pot is None or (side == "right" and smm.belief_state["objects"][obj]["position"][0] > smm.belief_state["objects"][target_pot]["position"][0]):
             target_pot = obj
     # if we are looking for the status of the pot
     if knowledge == "state":
-        ing = [x for x in smm.belief_state["objects"] if x != target_pot and smm.belief_state["objects"][x]["visible"] and tuple(smm.belief_state["objects"][x]["at"]) == tuple(smm.belief_state["objects"][target_pot]["at"])]
+        ing = [x for x in smm.belief_state["objects"] if x != target_pot and smm.belief_state["objects"][x]["visible"] and tuple(smm.belief_state["objects"][x]["position"]) == tuple(smm.belief_state["objects"][target_pot]["position"])]
         num_ingredients = 0 if len(ing) == 0 else len(smm.belief_state["objects"][ing[0]]["propertyOf"]["title"].split("+"))
         if num_ingredients == 0:
             return "empty"
@@ -364,7 +373,7 @@ def get_pot_status(smm:smm.smm.SMM, side:str, knowledge:str)->str:
     # if we are looking for the number of ingredients 
     elif knowledge == "full":
         # get ingredients on this pot
-        ing = [x for x in smm.belief_state["objects"] if x != target_pot and smm.belief_state["objects"][x]["visible"] and tuple(smm.belief_state["objects"][x]["at"]) == tuple(smm.belief_state["objects"][target_pot]["at"])]
+        ing = [x for x in smm.belief_state["objects"] if x != target_pot and smm.belief_state["objects"][x]["visible"] and tuple(smm.belief_state["objects"][x]["position"]) == tuple(smm.belief_state["objects"][target_pot]["position"])]
         num_ingredients = 0 if len(ing) == 0 else len(smm.belief_state["objects"][ing[0]]["propertyOf"]["title"].split("+"))
         if num_ingredients == 0:
             return "Empty"

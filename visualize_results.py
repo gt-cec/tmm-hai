@@ -51,7 +51,7 @@ def plot_histogram_question_frequency(results_by_question:dict):
 
     # Use custom colors and opacity
     for r, bar in zip(x, bars):
-        bar.set_facecolor(matplotlib.pyplot.cm.Wistia(1 - r / max_val))
+        bar.set_facecolor(matplotlib.pyplot.cm.RdPu(r / max_val))
         bar.set_alpha(1)
 
     matplotlib.pyplot.title("Question Frequency")
@@ -134,14 +134,14 @@ def make_histogram(frequencies={}, raw_values=[], title="", y_label="", x_label=
     if raw_values != []:
         _, _, patches = ax.hist(x=raw_values, bins=numpy.arange(0, 1, 0.1 if x_tick_frequency is None else x_tick_frequency), align="mid", edgecolor="white", linewidth=2)
         for i in range(len(patches)):
-            color = matplotlib.pyplot.cm.Wistia(1 - patches[i].get_height() / y_max)
+            color = matplotlib.pyplot.cm.RdPu(1 - patches[i].get_height() / y_max)
             patches[i].set_facecolor(color)
 
     elif frequencies != {}:
         bars = ax.bar(frequencies.keys(), frequencies.values(), align="center")
         # Use custom colors and opacity
         for r, bar in zip(frequencies.values(), bars):
-            bar.set_facecolor(matplotlib.pyplot.cm.Wistia(1 - r / max_val))
+            bar.set_facecolor(matplotlib.pyplot.cm.RdPu(1 - r / max_val))
             bar.set_alpha(1)
 
     ax.set_title(title)
@@ -239,7 +239,8 @@ def plot_confusion_question_responses(results_by_question, model:str="user", cat
                 response = "left half" if "left" in response else 'right half' if "right" in response else "center-ish"
             # handle centerish questions
             elif questions[_question]["category"] == "where agent":
-                response = "center" if "center" in response.lower() or "center center" in response.lower() else response 
+                response = response.replace("center-", "").lower().strip()
+                response = "center" if "center" in response else response
             # handle odd state machine maps
             elif questions[_question]["category"] == "state agent":
                 response = grader.smm_to_recipe[response] if response in grader.smm_to_recipe else response
@@ -260,17 +261,19 @@ def make_histogram_2d(raw_values=[], title="", xlabel="", ylabel="", x_categorie
     x_numerical = numpy.array([x_categories.index(i[0].lower()) for i in raw_values])
     y_numerical = numpy.array([y_categories.index(i[1]) for i in raw_values])
 
-    # create a custom color map that extends Wistia with white at 0, for a white background instead of the default
+    # create a custom color map that extends RdPu with white at 0, for a white background instead of the default
     colors = [(1, 1, 1)]
-    colors.extend(matplotlib.pyplot.cm.Wistia(numpy.linspace(0, 1, 256)))  # Wistia colormap
+    colors.extend(matplotlib.pyplot.cm.RdPu(numpy.linspace(.3, 1, 256)))  # RdPu colormap
     cmap = matplotlib.colors.ListedColormap(colors)
+
+    fontsize = 15
 
     # create the 2D histogram
     hist, x_edges, y_edges = numpy.histogram2d(x=x_numerical, y=y_numerical, bins=[numpy.arange(len(x_categories)+1), numpy.arange(len(y_categories)+1)])
     orig_hist = hist.copy()
     max_val = numpy.max(hist)
-    hist = hist / max_val * 0.8  # scale for a nice color range on the color map
-    hist[hist > 0] += 0.2  # move up for better visibility
+    hist = hist / len(x_numerical) * 0.9  # scale for a nice color range on the color map
+    hist[hist > 0] += 0.1  # move up for better visibility
 
     # plot the histogram
     matplotlib.pyplot.imshow(hist.T, origin='lower', extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]], cmap=cmap)  # extent aligns the axis labels
@@ -280,14 +283,14 @@ def make_histogram_2d(raw_values=[], title="", xlabel="", ylabel="", x_categorie
         for j in range(len(y_edges) - 1):
             if orig_hist[i,j] != 0:
                 matplotlib.pyplot.text((x_edges[i] + x_edges[i+1]) / 2, (y_edges[j] + y_edges[j+1]) / 2, int(orig_hist[i, j]),
-                    color='grey', ha='center', va='center', fontsize=15 if len(x_categories) < 10 else 8)
+                    color='white' if hist[i,j] > .0 else "dimgrey", ha='center', va='center', fontsize=18 if len(x_categories) < 10 else 8)
 
     # configure the ticks, labels, titles, spines, aspect ratio
-    ax.set_xticks(ticks=numpy.arange(len(x_categories)) + 0.5, labels=[x.capitalize() for x in x_categories], rotation=30, ha="right")
-    ax.set_yticks(ticks=numpy.arange(len(y_categories)) + 0.5, labels=[y.capitalize() for y in y_categories], rotation=0, va="center")
+    ax.set_xticks(ticks=numpy.arange(len(x_categories)) + 0.5, labels=[x.capitalize() for x in x_categories], rotation=30, ha="right", fontsize=fontsize)
+    ax.set_yticks(ticks=numpy.arange(len(y_categories)) + 0.5, labels=[y.capitalize() for y in y_categories], rotation=0, va="center", fontsize=fontsize)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.set_title(title)
+    ax.set_title(title, fontsize=fontsize)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
@@ -318,11 +321,11 @@ if __name__ == "__main__":
     # plot_confusion_question_responses(results_by_question, model="user", category="remaining soup")
 
     ### plot the ground truth responses
-    # plot_confusion_question_responses(results_by_question, model="ground truth")  # confusion matrix of the true responses to each question
-    # plot_confusion_question_responses(results_by_question, model="ground truth", category="available")
-    # plot_confusion_question_responses(results_by_question, model="ground truth", category="where ingredient")
-    # plot_confusion_question_responses(results_by_question, model="ground truth", category="where agent")
-    # plot_confusion_question_responses(results_by_question, model="ground truth", category="state agent")
-    # plot_confusion_question_responses(results_by_question, model="ground truth", category="fullness pot")
-    # plot_confusion_question_responses(results_by_question, model="ground truth", category="state pot")
-    # plot_confusion_question_responses(results_by_question, model="ground truth", category="remaining soup")
+    plot_confusion_question_responses(results_by_question, model="ground truth")  # confusion matrix of the true responses to each question
+    plot_confusion_question_responses(results_by_question, model="ground truth", category="available")
+    plot_confusion_question_responses(results_by_question, model="ground truth", category="where ingredient")
+    plot_confusion_question_responses(results_by_question, model="ground truth", category="where agent")
+    plot_confusion_question_responses(results_by_question, model="ground truth", category="state agent")
+    plot_confusion_question_responses(results_by_question, model="ground truth", category="fullness pot")
+    plot_confusion_question_responses(results_by_question, model="ground truth", category="state pot")
+    plot_confusion_question_responses(results_by_question, model="ground truth", category="remaining soup")

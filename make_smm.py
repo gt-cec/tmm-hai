@@ -22,7 +22,7 @@ def run_smm(user_id, round):
         lines = f.readlines()
 
     # init model
-    model = smm.smm.SMM("predicates")
+    model = smm.smm.SMM("predicates", visibility="O10")
 
     # init plot
     plt.show(block=False)
@@ -47,9 +47,12 @@ def run_smm(user_id, round):
             model.init_belief_state_from_file(state["layout"] + ".layout")
 
         # update the smm
+        # print("RAW SEEN", state)
+        state = model.convert_log_to_state(state)
         model.update(state, debug=True)
+        print([(model.belief_state["objects"][o]["propertyOf"]["title"], model.belief_state["objects"][o]["position"], model.belief_state["objects"][o]["visible"]) for o in model.belief_state["objects"]])
         visualize(model.belief_state)
-        input()
+        # input()
 
     # keep the plot visible
     plt.show()
@@ -103,14 +106,12 @@ def visualize(state):
         G.add_nodes_from(state["objects"].keys())
         G.add_nodes_from(state["agents"].keys())
 
-    print("VISUALIZE BELIEF STATE OBJECTS", [(state["objects"][x]["propertyOf"]["name"], state["objects"][x]["at"]) for x in state["objects"] if state["objects"][x]["propertyOf"]["name"] in ["tomato", "onion"]])
-
     # update the nodes
     for obj in state["objects"]:
         # set the node properties
         node_properties = {
-            "x" : state["objects"][obj]["at"][0],
-            "y" : 4 - state["objects"][obj]["at"][1],  # the game board is 4 high and 0,0 is at the top left
+            "x" : state["objects"][obj]["position"][0],
+            "y" : 4 - state["objects"][obj]["position"][1],  # the game board is 4 high and 0,0 is at the top left
             "class" : state["objects"][obj]["propertyOf"]["name"],
             "cookTime" : state["objects"][obj]["propertyOf"]["cookTime"],
             "isCooking" : state["objects"][obj]["propertyOf"]["isCooking"],
@@ -143,8 +144,8 @@ def visualize(state):
     for agent in state["agents"]:
         # set the node properties
         node_properties = {
-            "x" : state["agents"][agent]["at"][0],
-            "y" : 4 - state["agents"][agent]["at"][1],  # the game board is 4 high and 0,0 is at the top left
+            "x" : state["agents"][agent]["position"][0],
+            "y" : 4 - state["agents"][agent]["position"][1],  # the game board is 4 high and 0,0 is at the top left
             "facing x" : state["agents"][agent]["facing"][0],
             "facing y" : state["agents"][agent]["facing"][1],
             "holding" : state["agents"][agent]["holding"],

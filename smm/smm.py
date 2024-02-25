@@ -5,13 +5,19 @@ import smm.models.predicates
 import smm.models.fuzzy
 
 class SMM:
-    def __init__(self, model:str):
+    def __init__(self, model:str, visibility:str):
         if model == "predicates":
             self.model = smm.models.predicates.SMMPredicates()
         elif model == "fuzzy":
             self.model = smm.models.fuzzy.SMMFuzzy()
         else:
             raise ValueError("Failed to initialize SMM, model must be 'predicates' or 'fuzzy'")
+        if visibility[0] not in ["O", "D", "V"]:
+            raise ValueError("Incorrect visibility type, visibility must be of the format (type)(range), e.g., V5, O2, D99")
+        self.visibility_type = visibility[0]
+        if not visibility[1:].isdigit():
+            raise ValueError("Incorrect visibility range, visibility must be of the format (type)(range), e.g., V5, O2, D99")
+        self.visibility_range = int(visibility[1:])
         self.belief_state = {}  # the belief state output by the SMM
         self.agent_name = 0
         self.initialized = False
@@ -40,27 +46,136 @@ class SMM:
             self.init_belief_state(layout)
     
     # updates the model by filtering state visibility and shunting over to the model
-    def update(self, state, debug=False):
-        state = copy.deepcopy(state)
-        state = self.filter_visibility(state)
-        self.belief_state = self.model.update(state, debug=debug)
+    #   from_log: dictionary from a log file, representing raw observations from the game
+    #   from_smm: dictionary from another SMM, representing a belief state\
+    def update(self, state:dict, debug:bool=False)->None:
+        state = copy.deepcopy(state)  # deep copy the dict
+        state = self.filter_visibility(state=state)  # remove features outside the user's visibility from the state
+        self.belief_state = self.model.update(state=state, debug=debug)  # update the model
 
     # filter out objects and agents that are not immediately visible
-    def filter_visibility(self, state):
-        agent_position = state["state"]["players"][self.agent_name]["position"]
+    def filter_visibility(self, state:dict):
+        agent_position = state["agents"]["A" + str(self.agent_name)]["position"] #if state_type == "log" else state["agents"]["A" + str(self.agent_name)]["position"]
+        agent_orientation = state["agents"]["A" + str(self.agent_name)]["facing"] #if state_type == "log" else state["agents"]["A" + str(self.agent_name)]["facing"]
 
         # filter out objects
-        for i, o in enumerate(state["state"]["objects"]):
-            dX = o["position"][0] - agent_position[0]
-            dY = o["position"][1] - agent_position[1]
-            if not state["state"]["visibility"][o["position"][1]][o["position"][0]]:
-                del state["state"]["objects"][i]
+        for o in state["objects"]: #if state_type == "log" else state["objects"]):
+            dX = state["objects"][o]["position"][0] - agent_position[0] #if state_type == "log" else state["objects"][o]["position"][0] - agent_position[0]
+            dY = state["objects"][o]["position"][1] - agent_position[1] #if state_type == "log" else state["objects"][o]["position"][1] - agent_position[1]
+            if not self.can_see(agent_orientation, dX, dY):
+                del state["objects"][o]
         
         # filter out other agents
-        for i, a in enumerate(state["state"]["players"]):
-            dX = a["position"][0] - agent_position[0]
-            dY = a["position"][1] - agent_position[1]
-            if not state["state"]["visibility"][a["position"][1]][a["position"][0]]:
-                del state["state"]["players"][i]
+        for a in state["agents"]: #if state_type == "log" else state["agents"]):
+            dX = state["agents"][a]["position"][0] - agent_position[0] #if state_type == "log" else state["agents"][a]["position"][0] - agent_position[0]
+            dY = state["agents"][a]["position"][1] - agent_position[1] #if state_type == "log" else state["agents"][a]["position"][1] - agent_position[1]
+            if not self.can_see(agent_orientation, dX, dY):
+                del state["agents"][a]
         
+        return state
+
+    # whether the agent can see the object given the object's dx and dy relative to the agent, this is copied from game.py
+    def can_see(self, agent_orientation, dX, dY):       
+        # V visibility: agents sees everything in front of them with 90deg field of view (45deg angles)
+        if self.visibility_type == "V":
+            # agent facing right, ignore items to left of agent and beyond 45deg (dY > dX)
+            if agent_orientation == (1, 0) and (dX < 0 or abs(dY) > abs(dX) or dY * dY + dX * dX > self.visibility_range * self.visibility_range):
+                return False
+            # agent facing left, ignore items to right of agent and beyond 45deg (dY > dX)
+            if agent_orientation == (-1, 0) and (dX > 0 or abs(dY) > abs(dX) or dY * dY + dX * dX > self.visibility_range * self.visibility_range):
+                return False
+            # agent facing up, ignore items to down of agent and beyond 45deg (dX > dY)
+            if agent_orientation == (0, 1) and (dY < 0 or abs(dX) > abs(dY) or dY * dY + dX * dX > self.visibility_range * self.visibility_range):
+                return False
+            # agent facing down, ignore items to up of agent and beyond 45deg (dX > dY)
+            if agent_orientation == (0, -1) and (dY > 0 or abs(dX) > abs(dY) or dY * dY + dX * dX > self.visibility_range * self.visibility_range):
+                return False
+
+        # D visibility: agents see everything in front of them to a radius
+        elif self.visibility_type == "D":
+            # agent facing right, ignore items to left of agent and where dist > max
+            if agent_orientation == (1, 0) and (dX < 0 or dY * dY + dX * dX > self.visibility_range * self.visibility_range):
+                return False
+            # agent facing left, ignore items to right of agent and where dist > max
+            if agent_orientation == (-1, 0) and (dX > 0 or dY * dY + dX * dX > self.visibility_range * self.visibility_range):
+                return False
+            # agent facing up, ignore items to down of agent and where dist > max
+            if agent_orientation == (0, 1) and (dY < 0 or dY * dY + dX * dX > self.visibility_range * self.visibility_range):
+                return False
+            # agent facing down, ignore items to up of agent and where dist > max
+            if agent_orientation == (0, -1) and (dY > 0 or dY * dY + dX * dX > self.visibility_range * self.visibility_range):
+                return False
+        
+        # O visibility: agents see everything around them to a radius
+        elif self.visibility_type == "O":
+            # ignore items where dist > max
+            if dY * dY + dX * dX > self.visibility_range * self.visibility_range:
+                return False
+            
+        return True
+    
+    # converts an observed world state from the log files to the data structure used by the belief state modules
+    def convert_log_to_state(self, log):
+        state = {
+            "agents": {},
+            "objects": {}
+        }
+
+        # get the object information
+        for i in range(len(log["state"]["objects"])):
+            object_id = "O" + str(i+1)
+            state["objects"][object_id] = {
+                "position": log["state"]["objects"][i]["position"],
+                "propertyOf": {
+                    "name": log["state"]["objects"][i]["name"],
+                    "title": "O" + str(i+1) + "-" + log["state"]["objects"][i]["name"],
+                }
+            }
+
+            # if the object has ingredients, set those
+            if "_ingredients" in log["state"]["objects"][i]:
+                state["objects"][object_id]["propertyOf"]["ingredients"] = []
+                for ingredient in log["state"]["objects"][i]["_ingredients"]:
+                    state["objects"][object_id]["propertyOf"]["ingredients"].append({
+                        "position": ingredient["position"],
+                        "propertyOf": {
+                            "name": ingredient["name"]
+                        }
+                    })
+                if log["state"]["objects"][i]["is_ready"] is None:
+                    pass
+                state["objects"][object_id]["propertyOf"]["isReady"] = log["state"]["objects"][i]["is_ready"]
+                state["objects"][object_id]["propertyOf"]["isCooking"] = log["state"]["objects"][i]["is_cooking"]
+                if "is_idle" in log["state"]["objects"][i]:
+                    state["objects"][object_id]["propertyOf"]["isIdle"] = log["state"]["objects"][i]["is_idle"]
+
+        # get the agent information 
+        for i in range(len(log["state"]["players"])):
+            agent_id = "A" + str(i)
+            state["agents"][agent_id] = {
+                "position": log["state"]["players"][i]["position"],
+                "facing": log["state"]["players"][i]["orientation"],
+            }
+            # if the agent is holding an object, include it
+            if log["state"]["players"][i]["held_object"] is not None:
+                state["agents"][agent_id]["holding"] = {
+                    "position": log["state"]["players"][i]["position"],
+                    "propertyOf": {
+                        "name": log["state"]["players"][i]["held_object"]["name"],
+                        "holder": agent_id
+                    }
+                }
+                # if the object has ingredients, set those
+                if "_ingredients" in log["state"]["players"][i]["held_object"]:
+                    state["agents"][agent_id]["holding"]["propertyOf"]["ingredients"] = []
+                    for ingredient in log["state"]["players"][i]["held_object"]["_ingredients"]:
+                        state["agents"][agent_id]["holding"]["propertyOf"]["ingredients"].append({
+                            "position": ingredient["position"],
+                            "propertyOf": {
+                                "name": ingredient["name"]
+                            }
+                        })
+            else:
+                state["agents"][agent_id]["holding"] = None
+
         return state
