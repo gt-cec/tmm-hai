@@ -25,13 +25,13 @@ class SMMFuzzy:
         self.Q = {}  # finite set of states the person thinks the system is in
         self.Q_template = {
             "agent": {
-                "at": [-1,-1],
+                "position": [-1,-1],
                 "holding": "",
                 "going to": [-1,-1],
                 "goal": ""
             },
             "pot": {
-                "at": [-1,-1],
+                "position": [-1,-1],
                 "contains": [],
                 "cooking": False,
                 "cooked": False
@@ -61,14 +61,14 @@ class SMMFuzzy:
                     # copy the template
                     self.Q["A" + letter] = self.copy_template("agent")
                     # set the location params, we have no other information to initialize
-                    self.Q["A" + letter]["at"] = [row_id, col_id]
+                    self.Q["A" + letter]["position"] = [row_id, col_id]
                     self.Q["A" + letter]["going to"] = [row_id, col_id]
                 # if letter is a pot
                 if letter == "P":
                     # copy the template
                     self.Q["P" + letter] = self.copy_template("pot")
                     # set the location params, we have no other information to initialize
-                    self.Q["P" + letter]["at"] = [row_id, col_id]
+                    self.Q["P" + letter]["position"] = [row_id, col_id]
         print("initial Q", self.Q)
         return self.Q
 
@@ -86,7 +86,7 @@ class SMMFuzzy:
         self.M_new = copy.deepcopy(self.M)  # M is the belief state, Q is the actual state
         # we think the user will be less likely to notice events further away from their character
         # if "robot" in input_event:
-            # chance_event_was_seen = self.Q["agents"][self.robot_id]["at"] - 
+            # chance_event_was_seen = self.Q["agents"][self.robot_id]["position"] - 
         self.Q
         self.S
     

@@ -103,7 +103,7 @@ function generateInSituQuestions() {
         else if (category == "SA3 numremaining") {
             questionType = randomFromList(["cancook", "willcomplete"])
             if (questionType == "cancook") {
-                inSituQuestions.push(["How many more soups can be made/delivered, including soups in-progress? Make your best guess.", "multiple choice", ["No soups", "1-2 soups", "3-4 soups", "No idea"]])
+                inSituQuestions.push(["How many more soups can be made/delivered, including soups in-progress? Make your best guess.", "multiple choice", ["No soups", "1-2 soups", "3-4 soups", "5+ soups", "No idea"]])
             }
             else if (questionType == "willcomplete") {
                 inSituQuestions.push(["Do you think your team will complete all the dishes in time?", "multiple choice", ["YES or already complete", "Probably YES", "Not sure", "Probably NO", "Definite NO"]])
