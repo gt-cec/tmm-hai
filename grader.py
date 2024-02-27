@@ -79,9 +79,9 @@ def grade_user(user:str, round:int, debug=False):
                 if not smm_ground_truth.initialized:
                     smm_ground_truth.init_belief_state_from_file(layout)
                 if not smm_agent.initialized:
-                    smm_agent.init_belief_state_from_file(layout)
+                    smm_agent.belief_state = smm_ground_truth.belief_state
                 if not smm_user.initialized:
-                    smm_user.init_belief_state_from_file(layout)
+                    smm_user.belief_state = smm_agent.belief_state
 
                 observed_state = smm_ground_truth.convert_log_to_state(state)
                 smm_ground_truth.update(state=observed_state, debug=False)  # update the ground truth SMM

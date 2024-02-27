@@ -186,11 +186,9 @@ class SMMPredicates:
             else:
                 raise ValueError("PREDICATES: Object ID is not None (new object) or string (existing object)!", matched_ids)
 
-            # if object is on the same tile as an agent, associate the holder
-            if str(state["objects"][object_id]["position"]) in agent_locations:
-                self.updatePredicate("holding", agent_locations[str(state["objects"][object_id]["position"])], object_id)
-        # print("NEW BELIEF STATE", [(self.domain_knowledge["objects"][x]["propertyOf"]["name"], self.domain_knowledge["objects"][x]["position"]) for x in self.domain_knowledge["objects"]])
-        # print()
+            # if object is visible and on the same tile as an agent, associate the holder
+            if matched_ids[object_id] is not None and self.domain_knowledge["objects"][matched_ids[object_id]]["visible"] and str(state["objects"][object_id]["position"]) in agent_locations:
+                self.updatePredicate("holding", agent_locations[str(state["objects"][object_id]["position"])], matched_ids[object_id])
 
         # update usability between objects, inefficient n^2 algorithm but our environment size is pretty small
         for i, object_from in enumerate(self.domain_knowledge["objects"]):
@@ -254,13 +252,15 @@ class SMMPredicates:
         # ignore invisible (discarded) objects
         known_objects = {k : known_objects[k] for k in known_objects if known_objects[k]["visible"]}
         
-        known_object_names = [k for k in known_objects]
         ids = {k : None for k in objects}  # object index to known object name so we can match objects -> known object name
         completed_matches = {x : None for x in known_objects}  # known object index to object index so we can match known object name[known object index] -> object index
         
         if debug:
-            print("[Start] Known Objects:", [known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
             print("[Start] Seen Objects:", [objects[o]["propertyOf"]["name"] + (":" + "+".join([x["propertyOf"]["name"] for x in objects[o]["propertyOf"]["ingredients"]]) if "ingredients" in objects[o]["propertyOf"] else "") + " at " + str(objects[o]["position"]) for o in objects])
+            print("[Start] Known Objects:", [known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
+        if len(str([known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects]).split("soup")) > 2:
+            print("[DEBUG] Known Objects:", [k + " " + known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
+            pass
 
         # the naive case: objects have exact name/location matches, does not work for moved or transformed objects
         for o in objects:
@@ -299,7 +299,8 @@ class SMMPredicates:
                     ids[o] = k
                     completed_matches[k] = o
                     if debug:
-                        print("   matched known object", known_objects[k]["propertyOf"]["name"], "position", known_objects[k]["position"], "with seen object", objects[o]["propertyOf"]["name"], "position", objects[o]["position"])
+                        # print("   matched known object", known_objects[k]["propertyOf"]["name"], "position", known_objects[k]["position"], "with seen object", objects[o]["propertyOf"]["name"], "position", objects[o]["position"])
+                        pass
                     break
 
         unmatched_seen_objects = [seen_obj_id for seen_obj_id in ids if ids[seen_obj_id] is None]  # seen objects that have not been matched
@@ -308,7 +309,6 @@ class SMMPredicates:
         if debug:
             print("[After naive] Unmatched Known Objects:", [known_objects[k]["propertyOf"]["title"] + " was at " + str(known_objects[k]["position"]) for k in unmatched_known_objects])
             print("[After naive] Unmatched Seen Objects:", [objects[o]["propertyOf"]["name"] + (":" + "+".join([x["propertyOf"]["name"] for x in objects[o]["propertyOf"]["ingredients"]]) if "ingredients" in objects[o]["propertyOf"] else "") + " " + str(objects[o]["position"]) for o in unmatched_seen_objects])
-
 
         # the next case, match items that are held by other objects (e.g., soup to dish)
         for o in unmatched_seen_objects:
@@ -347,7 +347,7 @@ class SMMPredicates:
                                 raise ValueError("Could not find a known soup that this dish+soup could have come from!")
                             else:  # if a match was found, link them together
                                 ids[o] = closest_k
-                                completed_matches[closest_k] = 0
+                                completed_matches[closest_k] = o
                             
                         # otherwise link 1-1
                         else:
@@ -381,11 +381,13 @@ class SMMPredicates:
                 for k in unmatched_known_objects:
                     # ignore known objects that have already been matched to
                     if known_objects[k]["propertyOf"]["id"] in completed_matches and completed_matches[known_objects[k]["propertyOf"]["id"]] is not None:
-                        print("   Known object", k, "is actually already matched to", completed_matches[known_objects[k]["propertyOf"]["id"]])
+                        if debug:
+                            print("   Known object", k, "is actually already matched to", completed_matches[known_objects[k]["propertyOf"]["id"]])
                         continue
                     # ignore objects of the wrong class
                     if known_objects[k]["propertyOf"]["name"] != objects[o]["propertyOf"]["name"]:
-                        print("    Wrong name, known is", known_objects[k]["propertyOf"]["name"], "while this is", objects[o]["propertyOf"]["name"])
+                        if debug:
+                            print("    Wrong name, known is", known_objects[k]["propertyOf"]["name"], "while this is", objects[o]["propertyOf"]["name"])
                         continue
                     # if soup, ignore if ingredients are different
                     if known_objects[k]["propertyOf"]["name"] == "soup":
@@ -442,8 +444,8 @@ class SMMPredicates:
         unmatched_known_objects = [known_obj_id for known_obj_id in known_objects if completed_matches[known_obj_id] is None and known_objects[known_obj_id]["propertyOf"]["name"] not in ["pot", "station"]]  # known objects that have not been matched
 
         if debug:
-            print("[After picked up/placed down items] UNMATCHED SEEN", unmatched_seen_objects)
-            print("[After picked up/placed down items] UNMATCHED KNOWN", [(x, known_objects[x]["propertyOf"]["title"]) for x in unmatched_known_objects])
+            print("[After picked up/placed down items] Unamtched Known", [(x, known_objects[x]["propertyOf"]["title"]) for x in unmatched_known_objects])
+            print("[After picked up/placed down items] Unmatched Seen", unmatched_seen_objects)
 
         # check for ingredients that have become soups
         transformed_ingredients = []
@@ -451,7 +453,7 @@ class SMMPredicates:
             # check for a soup in the seen objects
             for o in unmatched_seen_objects:
                 if objects[o]["propertyOf"]["name"] == "soup":
-                    print("    Soup properties:", objects[o]["propertyOf"])
+                    # print("    Soup properties:", objects[o]["propertyOf"])
                     # check if the soup contains the ingredient
                     if "ingredients" in objects[o]["propertyOf"] and \
                         len(objects[o]["propertyOf"]["ingredients"]) > 0 :
@@ -462,11 +464,11 @@ class SMMPredicates:
                         len(objects[o]["propertyOf"]["ingredients"]) > 0 and \
                         known_objects[k]["propertyOf"]["name"] in [x["propertyOf"]["name"] for x in objects[o]["propertyOf"]["ingredients"]]:
 
-                        self.updatePredicate("contains", k, o)
+                        # self.updatePredicate("contains", k, o)
                         if debug:
                             print("    I believe object", k, known_objects[k]["propertyOf"]["name"], "has become a soup", objects[o])
-                        # set the ingredient to invisible
-                        self.updatePredicate("visible", k, False)
+                        self.updatePredicate("visible", k, False)  # set the ingredient to invisible
+                        self.updatePredicate("holder", k, None)  # set the holder to None
                         # "remove" the ingredient by setting its known object link to the soup
                         completed_matches[k] = o
                         # if there is not a soup there already, make the object there over the known ingredient
@@ -483,17 +485,18 @@ class SMMPredicates:
                         if no_soup:
                             if debug:
                                 print("        Adding a new object to ids slot", o, "is the known", known_objects[k])
-                            ids[o] = k
-                            completed_matches[k] = o
+                            # ids[o] = k
 
                         # match the objects by moving the ingredient to the soup object
                         known_objects[k]["position"] = objects[o]["position"]
                         break
 
+        unmatched_seen_objects = [seen_obj_id for seen_obj_id in ids if ids[seen_obj_id] is None]
         unmatched_known_objects = [known_obj_id for known_obj_id in known_objects if completed_matches[known_obj_id] is None and known_objects[known_obj_id]["propertyOf"]["name"] not in ["pot", "station"]]  # known objects that have not been matched
 
         if debug:
             print("[After ingredient transform] Umatched Known Objects", [(x, known_objects[x]["propertyOf"]["title"]) for x in unmatched_known_objects])
+            print("[After ingredient transform] Unmatched Seen", unmatched_seen_objects)
 
         # check for dishes that have been turned into soups
         for k in unmatched_known_objects:
@@ -504,10 +507,12 @@ class SMMPredicates:
                     if debug and objects[o]["name"] == "soup" and self.get_ingredient_list(objects[o]["id"]) == 3 and objects[o]["position"] == known_objects[k]["position"]:
                         print("LIKELY DISH TO SOUP!!!")
 
+        unmatched_seen_objects = [seen_obj_id for seen_obj_id in ids if ids[seen_obj_id] is None]
         unmatched_known_objects = [known_obj_id for known_obj_id in known_objects if completed_matches[known_obj_id] is None and known_objects[known_obj_id]["propertyOf"]["name"] not in ["pot", "station"]]  # known objects that have not been matched
 
         if debug:
             print("[After dish transform] Umatched Known Objects", [(x, known_objects[x]["propertyOf"]["title"]) for x in unmatched_known_objects])
+            print("[After dish transform] Unmatched Seen", unmatched_seen_objects)
 
         # check for soups that have been turned in to the station, hide them
         for k in unmatched_known_objects:  # for each unmatched known object
@@ -554,7 +559,6 @@ class SMMPredicates:
             self.updatePredicate("propertyOf", object_id, ("holder", None))
             self.updatePredicate("propertyOf", object_id, ("cookTime", None))
             self.updatePredicate("propertyOf", object_id, ("isCooking", None))
-            print("!new!", obj_dict["propertyOf"]["name"])
             self.updatePredicate("propertyOf", object_id, ("isReady", None))
             self.updatePredicate("propertyOf", object_id, ("isIdle", None))
         else:
@@ -577,6 +581,9 @@ class SMMPredicates:
         # holder
         if "propertyOf" in obj_dict and "holder" in obj_dict["propertyOf"]:
             self.updatePredicate("propertyOf", object_id, ("holder", obj_dict["propertyOf"]["holder"]))
+        # ingredients
+        if "propertyOf" in obj_dict and "ingredients" in obj_dict["propertyOf"]:
+            self.updatePredicate("propertyOf", object_id, ("ingredients", obj_dict["propertyOf"]["ingredients"]))
         # cook time
         if "propertyOf" in obj_dict and "cookTime" in obj_dict["propertyOf"]:
             self.updatePredicate("propertyOf", object_id, ("cookTime", obj_dict["propertyOf"]["cookTime"]))

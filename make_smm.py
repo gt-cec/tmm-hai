@@ -4,7 +4,11 @@ import smm.smm
 import ast
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib
+import math
+import numpy
 
+axes = None  # matplotlib plots
 G = None  # networkx graph
 node_colors = None  # networkx node colors
 classes = ["pot", "soup", "station", "onion", "tomato", "dish"]
@@ -21,11 +25,15 @@ def run_smm(user_id, round):
     with open("env/server/logs/" + user_id + ".txt", "r") as f:
         lines = f.readlines()
 
-    # init model
-    model = smm.smm.SMM("predicates", visibility="O10")
+    # init models
+    true_model = smm.smm.SMM("predicates", visibility="O10", agent=0)
+    agent_model = smm.smm.SMM("predicates", visibility="O10", agent=0)
+    human_model = smm.smm.SMM("predicates", visibility="O4", agent=1)
 
     # init plot
     plt.show(block=False)
+
+    first_view = True  # on the first view, sync all belief states to the ground truth
     
     # process each line
     for line in lines:
@@ -40,19 +48,27 @@ def run_smm(user_id, round):
         if "layout" not in state or state["layout"] not in rounds or rounds[state["layout"]] != round:  # ignore if incorrect layout/round
             continue
 
-        print("-----------------------------------")
+        # print("-----------------------------------")
 
         # make sure the model is initialized
-        if not model.initialized:
-            model.init_belief_state_from_file(state["layout"] + ".layout")
+        if not true_model.initialized:
+            true_model.init_belief_state_from_file(state["layout"] + ".layout")
 
         # update the smm
-        # print("RAW SEEN", state)
-        state = model.convert_log_to_state(state)
-        model.update(state, debug=True)
-        print([(model.belief_state["objects"][o]["propertyOf"]["title"], model.belief_state["objects"][o]["position"], model.belief_state["objects"][o]["visible"]) for o in model.belief_state["objects"]])
-        visualize(model.belief_state)
-        # input()
+        state = true_model.convert_log_to_state(state)
+        true_model.update(state, debug=False)
+        true_belief_state = true_model.get_visible_belief_state()
+
+        if first_view:
+            agent_model.model.domain_knowledge = true_belief_state
+            human_model.model.domain_knowledge = true_belief_state
+            first_view = False
+
+        agent_model.update(true_belief_state, debug=False)
+        agent_belief_state = agent_model.get_visible_belief_state()
+        human_model.update(agent_belief_state, debug=False)
+        human_belief_state = human_model.get_visible_belief_state()
+        visualize(models=[true_model, agent_model, human_model], titles=["Ground Truth Model", "Robot Model", "Human Model"])
 
     # keep the plot visible
     plt.show()
@@ -96,76 +112,104 @@ def get_num_ingredient_list(state, object_id):
     return state["objects"][object_id]["propertyOf"]["title"].count(":") + state["objects"][object_id]["propertyOf"]["title"].count("+")
 
 # shows the networkx plot
-def visualize(state):
-    global G
+def visualize(models:list, titles:list):
+    global G, axes
 
+    if axes is None:
+        _, a = plt.subplots(nrows=math.ceil(len(models)/2), ncols=2 if len(models) > 1 else 1)  # generate the subplots
+
+        if isinstance(a, numpy.ndarray):  # if needed, flatten the subplot nested tuple into an array
+            axes = []
+            for row in a:
+                if isinstance(row, numpy.ndarray):
+                    for col in row:
+                        axes.append(col)
+                else:
+                    axes.append(row)
+        else:
+            axes = [a]
+
+    # on the first iteration, initialize the graphs
     if G is None:
-        # create a graph
-        G = nx.Graph()
-        # add the nodes
-        G.add_nodes_from(state["objects"].keys())
-        G.add_nodes_from(state["agents"].keys())
+        G = []
+        for i in range(len(models)):
+            # create a graph
+            G.append(nx.Graph())
+            # add the nodes
+            G[i].add_nodes_from(models[i].belief_state["objects"].keys())
+            G[i].add_nodes_from(models[i].belief_state["agents"].keys())
 
-    # update the nodes
-    for obj in state["objects"]:
-        # set the node properties
-        node_properties = {
-            "x" : state["objects"][obj]["position"][0],
-            "y" : 4 - state["objects"][obj]["position"][1],  # the game board is 4 high and 0,0 is at the top left
-            "class" : state["objects"][obj]["propertyOf"]["name"],
-            "cookTime" : state["objects"][obj]["propertyOf"]["cookTime"],
-            "isCooking" : state["objects"][obj]["propertyOf"]["isCooking"],
-            "isReady" : state["objects"][obj]["propertyOf"]["isReady"],
-            "isIdle" : state["objects"][obj]["propertyOf"]["isIdle"],
-        }
-        # add a new node if it doesnt exist
-        if obj not in G.nodes:
-            G.add_node(obj)
-        G.nodes[obj].update(node_properties)
+    for i in range(len(models)):
+        # update the nodes
+        for obj in models[i].belief_state["objects"]:
+            # set the node properties
+            node_properties = {
+                "x" : models[i].belief_state["objects"][obj]["position"][0],
+                "y" : 4 - models[i].belief_state["objects"][obj]["position"][1],  # the game board is 4 high and 0,0 is at the top left
+                "class" : models[i].belief_state["objects"][obj]["propertyOf"]["name"],
+                "cookTime" : models[i].belief_state["objects"][obj]["propertyOf"]["cookTime"],
+                "isCooking" : models[i].belief_state["objects"][obj]["propertyOf"]["isCooking"],
+                "isReady" : models[i].belief_state["objects"][obj]["propertyOf"]["isReady"],
+                "isIdle" : models[i].belief_state["objects"][obj]["propertyOf"]["isIdle"],
+            }
+            # add a new node if it doesnt exist
+            if obj not in G[i].nodes:
+                G[i].add_node(obj)
+            G[i].nodes[obj].update(node_properties)
 
-    # remove objects that no longer exist or are not marked as visible
-    removed = [x for x in G.nodes if (x not in state["objects"] or not state["objects"][x]["visible"]) and x not in state["agents"]]
-    [G.remove_node(x) for x in removed]
+        # remove objects that no longer exist or are not marked as visible
+        removed = [x for x in G[i].nodes if (x not in models[i].belief_state["objects"] or not models[i].belief_state["objects"][x]["visible"]) and x not in models[i].belief_state["agents"]]
+        [G[i].remove_node(x) for x in removed]
 
-    # set the edges ("can use with")
-    G.clear_edges()
-    for object_from in G.nodes:
-        if object_from[0] == "A":  # agents do not have edges, only objects
-            continue
-        # set the node edges
-        for object_to_and_weight in state["objects"][object_from]["canUseWith"]:
-            if object_to_and_weight[1] > 0 and object_to_and_weight[0] in G.nodes:
-                G.add_edge(object_from, object_to_and_weight[0], weight=object_to_and_weight[1])
+        # set the edges ("can use with")
+        G[i].clear_edges()
+        for object_from in G[i].nodes:
+            if object_from[0] == "A":  # agents do not have edges, only objects
+                continue
+            # set the node edges
+            for object_to_and_weight in models[i].belief_state["objects"][object_from]["canUseWith"]:
+                if object_to_and_weight[1] > 0 and object_to_and_weight[0] in G[i].nodes:
+                    G[i].add_edge(object_from, object_to_and_weight[0], weight=object_to_and_weight[1])
 
-    # set the node colors by class
-    node_colors = [get_color((state["objects"][obj]["propertyOf"]["name"] if obj[0] == "O" else obj)) for obj in G.nodes]
-    
-    # update the agents
-    for agent in state["agents"]:
-        # set the node properties
-        node_properties = {
-            "x" : state["agents"][agent]["position"][0],
-            "y" : 4 - state["agents"][agent]["position"][1],  # the game board is 4 high and 0,0 is at the top left
-            "facing x" : state["agents"][agent]["facing"][0],
-            "facing y" : state["agents"][agent]["facing"][1],
-            "holding" : state["agents"][agent]["holding"],
-            "goal" : state["agents"][agent]["goal"],
-        }
-        G.nodes[agent].update(node_properties)
+        # set the node colors by class
+        node_colors = [get_color((models[i].belief_state["objects"][obj]["propertyOf"]["name"] if obj[0] == "O" else obj)) for obj in G[i].nodes]
+        
+        # update the agents
+        for agent in models[i].belief_state["agents"]:
+            # set the node properties
+            node_properties = {
+                "x" : models[i].belief_state["agents"][agent]["position"][0],
+                "y" : 4 - models[i].belief_state["agents"][agent]["position"][1],  # the game board is 4 high and 0,0 is at the top left
+                "facing x" : models[i].belief_state["agents"][agent]["facing"][0],
+                "facing y" : models[i].belief_state["agents"][agent]["facing"][1],
+                "holding" : models[i].belief_state["agents"][agent]["holding"],
+                "goal" : models[i].belief_state["agents"][agent]["goal"],
+                "name": agent
+            }
+            G[i].nodes[agent].update(node_properties)
 
-    # plot the graph
-    plt.clf()
-    pos = nx.rescale_layout_dict({obj : [float(G.nodes[obj]["x"]), float(G.nodes[obj]["y"])] for obj in G.nodes})
-    node_labels = {obj : obj for obj in G.nodes}
-    nx.draw(G, pos, with_labels=True, labels=node_labels, node_size=700, node_color=node_colors, font_size=10, font_color="black", font_weight="bold", edge_color="gray", linewidths=1, alpha=0.7)
+        pos = nx.rescale_layout_dict({obj : [float(G[i].nodes[obj]["x"]), float(G[i].nodes[obj]["y"])] for obj in G[i].nodes})
+        node_labels = {obj : obj for obj in G[i].nodes}
+        axes[i].clear()  # clear the axis content
+        axes[i].set_title(titles[i])
+
+        agent_name = "A" + str(models[i].agent_name)
+        agent_pos = pos[agent_name]
+        unit_scale = agent_pos[0] / models[i].belief_state["agents"][agent_name]["position"][0] 
+        unit_scale = max(max(abs(coord) for coord in pos[node]) for node in G[i].nodes)
+        agent_visible_radius = models[i].visibility_range * unit_scale
+        circle = matplotlib.patches.Circle(agent_pos, agent_visible_radius, edgecolor='r', facecolor='none')  # draw a circle around the agent
+        axes[i].add_patch(circle)  # add the patch
+
+        nx.draw(G[i], pos=pos, ax=axes[i], with_labels=True, labels=node_labels, node_size=700, node_color=node_colors, font_size=10, font_color="black", font_weight="bold", edge_color="gray", linewidths=1, alpha=0.7)
 
     # record the object pairs
     output = ""
-    for object_from in state["objects"]:
-        object_from_encoding = get_object_encoding(state, object_from)
-        for object_to_and_weight in state["objects"][object_from]["canUseWith"]:
+    for object_from in models[i].belief_state["objects"]:
+        object_from_encoding = get_object_encoding(models[i].belief_state, object_from)
+        for object_to_and_weight in models[i].belief_state["objects"][object_from]["canUseWith"]:
             object_to = object_to_and_weight[0]
-            object_to_encoding = get_object_encoding(state, object_to)
+            object_to_encoding = get_object_encoding(models[i].belief_state, object_to)
             edge_weight = object_to_and_weight[1]
             output += ",".join(object_from_encoding) + "," + ",".join(object_to_encoding) + "," + str(edge_weight) + "\n"
 
