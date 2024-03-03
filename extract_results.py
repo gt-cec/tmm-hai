@@ -15,6 +15,8 @@ def main():
 
     # for each user
     for user in os.listdir(log_path):
+        if ".txt" not in user: # ignore if this is not a text file
+            continue
         user = user.replace(".txt", "")  # remove the trailing .txt from the file name
         if user not in user_responses:  # ensure user is in the user responses
             user_responses[user] = {}
@@ -33,13 +35,18 @@ def main():
                 with open(processed_user_data_path + user + "_" + str(round) + ".pkl", "rb") as f:
                     user_data = pickle.load(f)
                     responses = user_data[0]
-                    score = user_data[1]
-                    num_questions = user_data[2]
+                    user_score_wrt_true = user_data[1]
+                    agent_score_wrt_true = user_data[2]
+                    estimated_human_score_wrt_true = user_data[3]
+                    true_score_wrt_user = user_data[4]
+                    agent_score_wrt_user = user_data[5]
+                    estimated_human_score_wrt_user = user_data[6]
+                    num_questions = user_data[7]
             else:  # otherwise, process the user logs
                 # this will create new SMMs, so data does not carry over between users and rounds
-                responses, score, num_questions = grader.grade_user(user=user, round=round, debug=False)
+                responses, user_score_wrt_true, agent_score_wrt_true, estimated_human_score_wrt_true, true_score_wrt_user, agent_score_wrt_user, estimated_human_score_wrt_user, num_questions = grader.grade_user(user=user, round=round, debug=False)
                 with open(processed_user_data_path + user + "_" + str(round) + ".pkl", "wb") as f:  # save the user's data
-                    pickle.dump([responses, score, num_questions], f)
+                    pickle.dump([responses, user_score_wrt_true, agent_score_wrt_true, estimated_human_score_wrt_true, true_score_wrt_user, agent_score_wrt_user, estimated_human_score_wrt_user, num_questions], f)
             
             # for each question in the responses
             for question in responses:
