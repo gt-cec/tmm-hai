@@ -1,3 +1,6 @@
+currentInSituQuestion = null
+currentInSituResponse = null
+
 function showInSituQuestions() {
     document.getElementById("left-panel").style.display = "flex"
     document.getElementById("right-panel-instructions").style.display = "none"
@@ -14,6 +17,7 @@ function nextInSituQuestion() {
     let q = inSituQuestions.pop()
     if (q != undefined) {
         setInSituQuestion(q[0], q[1], q[2])
+        setInSituButtonLoading(5, () => { activateInSituSubmit() })
     }
     // go back to the study
     else {
@@ -21,6 +25,24 @@ function nextInSituQuestion() {
         pause(false)
         startInSituQuestionTimeout()
     }
+}
+
+function activateInSituSubmit() {
+    document.getElementById("insitu-submit").style.backgroundColor = "grey";
+    t = window.setInterval(() => {
+        if (selectedInSituQuestion != null) {
+            console.log("Submit timer is complete.")
+            document.getElementById("insitu-submit").style.backgroundColor = "lightgreen"
+            document.getElementById("insitu-submit").onclick = () => {
+                console.log("Clicked submit!")
+                log({"type": "in situ submission", "question": currentInSituQuestion, "response": currentInSituResponse})
+                selectedInSituQuestion = null
+                nextInSituQuestion()
+            }
+            window.clearTimeout(t)
+        }
+    }, 100)
+    
 }
 
 // hides the in situ questions and returns to the base overcooked state
@@ -135,11 +157,14 @@ function checkIngredient() {
 // records the button response press
 function recordInSituResponse(question, response) {
     // log the answer
-    log({"type": "in situ", "question": question, "response": response})
-    nextInSituQuestion()
+    currentInSituQuestion = question
+    currentInSituResponse = response
+    log({"type": "in situ selection", "question": question, "response": response})
 }
 
 // shows the question, questionType can be "multiple choice" or "quadrant" or "side"
+selectedInSituQuestion = null
+responseToElement = {}
 function setInSituQuestion(text, questionType, questions) {
     document.getElementById("insitu-questions-container").style.display = "flex"
     document.getElementById("insitu-questions-questions-container").innerHTML = ""
@@ -152,7 +177,15 @@ function setInSituQuestion(text, questionType, questions) {
             q = document.createElement("div")
             q.setAttribute("class", "insitu-questions-question")
             q.innerHTML = element
-            q.onclick = () => {recordInSituResponse(text, element)}
+            responseToElement[element] = q
+            q.onclick = () => {
+                recordInSituResponse(text, element)
+                responseToElement[element].style.backgroundColor = "#ee90ee"
+                if (selectedInSituQuestion != null) {
+                    responseToElement[selectedInSituQuestion].style.backgroundColor = ""
+                }
+                selectedInSituQuestion = element
+            }
             document.getElementById("insitu-questions-questions-container").appendChild(q)
         })
     }
@@ -173,7 +206,15 @@ function setInSituQuestion(text, questionType, questions) {
             q = document.createElement("div")
             q.setAttribute("class", "insitu-questions-question insitu-questions-grid-item")
             q.innerHTML = quartants[i]
-            q.onclick = () => {recordInSituResponse(text, quartants[i])}
+            responseToElement[quartants[i]] = q
+            q.onclick = () => {
+                recordInSituResponse(text, quartants[i])
+                responseToElement[quartants[i]].style.backgroundColor = "#ee90ee"
+                if (selectedInSituQuestion != null) {
+                    responseToElement[selectedInSituQuestion].style.backgroundColor = ""
+                }
+                selectedInSituQuestion = quartants[i]
+            }
             // add the grid item to the correct row
             (i < 2 ? topRow : bottomRow).appendChild(q)
         }
@@ -186,14 +227,43 @@ function setInSituQuestion(text, questionType, questions) {
         centerButton = document.createElement("div")
         centerButton.setAttribute("class", "insitu-questions-question insitu-questions-grid-item")
         centerButton.innerHTML = "Center or In-Between"
-        centerButton.onclick = () => {recordInSituResponse(text, "center")}
+        responseToElement[centerButton.innerHTML] = centerButton
+        centerButton.onclick = () => {
+            recordInSituResponse(text, "center")
+            responseToElement[centerButton.innerHTML].style.backgroundColor = "#ee90ee"
+            if (selectedInSituQuestion != null) {
+                responseToElement[selectedInSituQuestion].style.backgroundColor = ""
+            }
+            selectedInSituQuestion = centerButton.innerHTML
+        }
         centerRow.appendChild(centerButton)
 
         // add a "no idea" option
         noIdeaButton = document.createElement("div")
         noIdeaButton.setAttribute("class", "insitu-questions-question")
         noIdeaButton.innerHTML = "No idea"
-        noIdeaButton.onclick = () => {recordInSituResponse(text, "no idea")}
+        responseToElement[noIdeaButton.innerHTML] = noIdeaButton
+        noIdeaButton.onclick = () => {
+            recordInSituResponse(text, "no idea")
+            responseToElement[noIdeaButton.innerHTML].style.backgroundColor = "#ee90ee"
+            if (selectedInSituQuestion != null) {
+                responseToElement[selectedInSituQuestion].style.backgroundColor = ""
+            }
+            selectedInSituQuestion = noIdeaButton.innerHTML
+        }
         document.getElementById("insitu-questions-questions-container").appendChild(noIdeaButton)
     }
+}
+
+// resets the highlighting for when a question is clicked
+function setQuestionHighlighting(question) {
+    document.getElementById("insitu-questions-questions-container").childNodes.forEach(element => {
+        console.log("Highlight element", element, "and q", question)
+        if (element.innerHTML == question) {
+            element.style.backgroundColor = "#ee90ee"
+        }
+        else {
+            element.style.backgroundColor = "lightblue"
+        }
+    })
 }

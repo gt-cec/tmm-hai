@@ -3,7 +3,7 @@ var socket = io()
 
 $(document).ready(function(){
     // sending a connect request to the server.
-    socket = io.connect('https://grateful-firefly-huge.ngrok-free.app');
+    socket = io.connect('https://2d16-130-207-94-34.ngrok-free.app');
 });
 
 $(window).on('beforeunload', function(){
@@ -49,6 +49,24 @@ function startInSituQuestionTimeout() {
         pause(true)
         showInSituQuestions()
     }, 1000 * 30)
+}
+
+function setInSituButtonLoading(timeout, after) {
+    framerate = 30
+    initTime = new Date().getTime()
+    timeout *= 1000
+    document.getElementById("insitu-submit").style.backgroundColor = "lightgrey"
+    document.getElementById("insitu-submit-bar").style.backgroundColor = "green"
+    document.getElementById("insitu-submit").onclick = () => {}
+    const loading = window.setInterval(() => {
+        current = 100 * (new Date().getTime() - initTime) / timeout
+        document.getElementById("insitu-submit-bar").style.width = (current) + "%"
+        if (current >= 100) {
+            document.getElementById("insitu-submit").style.backgroundColor = ""
+            window.clearInterval(loading)
+            after()
+        }
+    }, 1 / framerate)
 }
 
 /* * * * * * * * * * * * * 
@@ -422,7 +440,7 @@ function introduceStage() {
     // after the round3 stage, give a 20 second break
     if (studyStage == "round4") {
         // show the instructions
-        showInstructions("Just one more, you got this!.")
+        showInstructions("Just one more, you got this! Take some deep breaths to relax.")
         setInstructionsButtonToContinue(undefined, () => {previewRound("preview_kitchen_round4.png", "round4")}, 5)
         return
     }
@@ -477,26 +495,26 @@ function resetButtons(obj) {
 // show the welcome text
 function showIntroductionText() {
     showInstructions("Welcome to our study!<br><br>In this game you are a restaurant chef trying to cook vegetable soups.<br><br>Your goal is to use the ingredients at your disposal to cook as many soups as you can within three minutes. If you are familiar with the game Overcooked, this is very similar.<br><br>You have an AI partner that is trying to help you, however they are not very considerate. We need your help to improve the AI's helpfulness!<br><br><b>This study webpage will automatically make itself fullscreen.</b>")
-    setInstructionsButtonToContinue(undefined, showInstructions1Text, 1)
+    setInstructionsButtonToContinue(undefined, showInstructions1Text, 5)
 }
 
 // show the game instructions "This is your chef"
 function showInstructions1Text() {
     
     showInstructions("This is your chef. Cute, right?<br><br><img height='150rem' src='static/images/chef.png'/><br>To play the game, control your chef with the arrow keys or WASD keys.<br><br><img class='instructions-controls-image' src='static/images/controls.png'/><br>")
-    setInstructionsButtonToContinue(showIntroductionText, showInstructions2Text, 1)
+    setInstructionsButtonToContinue(showIntroductionText, showInstructions2Text, 3)
 }
 
 // show the game instructions "How to make a soup"
 function showInstructions2Text() {
     showInstructions("Your goal is to cook as many soups as you can! Onions and tomatoes are placed around the kitchen, use them to make soups:<br><br><img width='100%' src='static/images/cooking_instructions.png'/><br><br>Try to cook all the available ingredients! You can mix and match ingredients in your soups. If you accidentally pick up an object, you can set it down on an empty counter.")
-    setInstructionsButtonToContinue(showInstructions1Text, showResearchText, 1)
+    setInstructionsButtonToContinue(showInstructions1Text, showResearchText, 10)
 }
 
 // show the research overview
 function showResearchText() {
     showInstructions("As you play the game, the study will pause to ask you questions such as where you think kitchen objects are located.<br><br>On our end, we will use your responses to make the AI agent (and real-life robots) better able to assist people with household tasks.<br><br>We hope you enjoy this study :-)<br><br>- Jack<br><br>(PS: you can email me at <b>kolb@gatech.edu</b> if something breaks!)")
-    setInstructionsButtonToContinue(showInstructions2Text, showConsent, 1)
+    setInstructionsButtonToContinue(showInstructions2Text, showConsent, 5)
 }
 
 // consent
