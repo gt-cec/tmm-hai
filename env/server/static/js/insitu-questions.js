@@ -70,7 +70,7 @@ function generateInSituQuestions() {
         applicableCategories = []
         categories.forEach((category) => {
             if (!askedQuestions.includes(category)) {
-                applicableCategories.add(category)
+                applicableCategories.push(category)
             }
         })
         if (applicableCategories.length == 0) {  // if all categories have been asked, reset the categories
@@ -80,7 +80,7 @@ function generateInSituQuestions() {
 
         // select a category
         category = randomFromList(applicableCategories)
-        askedQuestions.add(category)
+        askedQuestions.push(category)
 
         // remove selected category from the possible categories
         categories.splice(categories.indexOf(category), 1)
