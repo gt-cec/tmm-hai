@@ -46,7 +46,7 @@ function generateInSituQuestions() {
     for (let i = 0; i < 2; i++) {
         // filter the applicable categories to remove question categories that have been asked
         applicableCategories = []
-        categories.foreach((category) => {
+        categories.forEach((category) => {
             if (!askedQuestions.contains(category)) {
                 applicableCategories.add(category)
             }

@@ -622,8 +622,6 @@ def play_game(game, smm=None, fps=10):
             game.deactivate()
         cleanup_game(game)
 
-
-
 def run(_smm=None):
     # set the shared mental model
     if _smm is not None:
