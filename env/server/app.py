@@ -373,7 +373,7 @@ def set_level():
 
     if level == "intro":
         LAYOUT = "RSMM1"
-        GAME_TIME = 93
+        GAME_TIME = 60
     elif level == "practice":
         LAYOUT = "RSMM2"
         GAME_TIME = 93

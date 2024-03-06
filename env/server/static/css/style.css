@@ -338,6 +338,30 @@ div.instructions-buttons-container {
   align-items: center;
 }
 
+#insitu-submit {
+  width: 40%;
+  margin-top: 2rem;
+  font-size: 2.5rem;
+  border-radius: .5rem;
+  box-shadow: 2px 2px 2px grey;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+}
+
+#insitu-submit-bar {
+  background-color: green;
+  height: .25rem;
+  width: 0%;
+  z-index: 2;
+  align-self:first baseline;
+  border-radius: 0 0 .5rem .5rem;
+}
+
+#insitu-submit-text:hover {
+  background-color: rgb(119, 160, 119);
+}
+
 div.instructions-continue {
   background-color: lightblue;
 }
@@ -585,7 +609,7 @@ div.insitu-questions-questions-container {
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4rem;
+  margin-top: 1rem;
   padding-bottom: 2rem;
 }
 

@@ -425,7 +425,7 @@ class OvercookedGame(Game):
             "RIGHT" : Direction.EAST,
             "SPACE" : Action.INTERACT
         }
-        self.ticks_per_ai_action = 10
+        self.ticks_per_ai_action = 5
         self.curr_tick = 0
         self.human_players = set()
         self.npc_players = set()
