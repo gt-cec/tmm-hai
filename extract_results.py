@@ -7,6 +7,7 @@ def main():
     round_responses = {}  # responses for each round, invariant of the user
     user_responses = {}  # responses for each user, invariant of the round
     structured_responses = {}  # responses for each user, for each round
+    structured_scores = {}  # scores for each user, for each round
 
     log_path = "./env/server/logs/"  # path of user data logs 
 
@@ -22,6 +23,8 @@ def main():
             user_responses[user] = {}
         if user not in structured_responses:  # ensure user is in the structured responses
             structured_responses[user] = {}
+        if user not in structured_scores:  # ensure user is in the structured scores
+            structured_scores[user] = {}
 
         # for each round
         for round in [1, 2, 3, 4]: 
@@ -29,6 +32,8 @@ def main():
                 round_responses[round] = {}
             if round not in structured_responses[user]:  # ensure round is in the structured responses for the user
                 structured_responses[user][round] = {}
+            if round not in structured_scores[user]:  # ensure round is in the structured scores for the user
+                structured_scores[user][round] = {}
 
             # run through the round and gather the Q/A for the user and mental models
             if user + "_" + str(round) in processed_users:  # if the user has already been processed, use that instead
@@ -47,6 +52,14 @@ def main():
                 responses, user_score_wrt_true, agent_score_wrt_true, estimated_human_score_wrt_true, true_score_wrt_user, agent_score_wrt_user, estimated_human_score_wrt_user, num_questions = grader.grade_user(user=user, round=round, debug=False)
                 with open(processed_user_data_path + user + "_" + str(round) + ".pkl", "wb") as f:  # save the user's data
                     pickle.dump([responses, user_score_wrt_true, agent_score_wrt_true, estimated_human_score_wrt_true, true_score_wrt_user, agent_score_wrt_user, estimated_human_score_wrt_user, num_questions], f)
+
+            # record the score information
+            structured_scores[user][round]["user wrt full"] = user_score_wrt_true
+            structured_scores[user][round]["agent wrt full"] = agent_score_wrt_true
+            structured_scores[user][round]["estimated wrt full"] = estimated_human_score_wrt_true
+            structured_scores[user][round]["full wrt user"] = true_score_wrt_user
+            structured_scores[user][round]["agent wrt user"] = agent_score_wrt_user
+            structured_scores[user][round]["estimated wrt user"] = estimated_human_score_wrt_user
             
             # for each question in the responses
             for question in responses:
@@ -67,14 +80,16 @@ def main():
                     structured_responses[user][round][question].append(response)
 
     # save the responses
-    with open(processed_user_data_path + "smm_results_by_question.pkl", "wb") as f:
+    with open(processed_user_data_path + "smm_responses_by_question.pkl", "wb") as f:
         pickle.dump(question_responses, f)
-    with open(processed_user_data_path + "smm_results_by_round.pkl", "wb") as f:
+    with open(processed_user_data_path + "smm_responses_by_round.pkl", "wb") as f:
         pickle.dump(round_responses, f)
-    with open(processed_user_data_path + "smm_results_by_user.pkl", "wb") as f:
+    with open(processed_user_data_path + "smm_responses_by_user.pkl", "wb") as f:
         pickle.dump(user_responses, f)
-    with open(processed_user_data_path + "smm_results_by_user_and_round.pkl", "wb") as f:
+    with open(processed_user_data_path + "smm_responses_by_user_and_round.pkl", "wb") as f:
         pickle.dump(structured_responses, f)
+    with open(processed_user_data_path + "smm_scores_by_user_and_round.pkl", "wb") as f:
+        pickle.dump(structured_scores, f)
     
     print("Processing complete! See the output .pkl files.")
 

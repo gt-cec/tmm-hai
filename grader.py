@@ -107,6 +107,8 @@ def grade_user(user:str, round:int, debug=False):
 
             # handle in-situ questions
             if "type" in log_dict:
+                if log_dict["stage"] != "round" + str(round):
+                    continue
                 if log_dict["type"] == "in situ submission":
                     question = clean_question_string(log_dict["question"])  # clean the question
                     print("Question:", question)
@@ -246,7 +248,7 @@ def score_response(question:str, candidate_response:str, ground_truth_response:s
             score += 1
         elif candidate_response == "likely yes" and ground_truth_response == "true":
             score += .5
-        elif candidate_response == "unsure":
+        elif candidate_response == "unsure" or candidate_response == "no idea":
             score += .25
         elif candidate_response == "likely no" and ground_truth_response == "false":
             score += .5
@@ -394,7 +396,7 @@ def get_remaining_soups(smm:smm.smm.SMM)->str:
 
 # get whether an ingredient is available
 def get_ingredient_available(smm:smm.smm.SMM, ingredient:str)->str:
-    ingredient_available = len([obj for obj in smm.belief_state["objects"] if ingredient in smm.belief_state["objects"][obj]["propertyOf"]["name"]]) > 0
+    ingredient_available = len([obj for obj in smm.belief_state["objects"] if ingredient in smm.belief_state["objects"][obj]["propertyOf"]["name"] and smm.belief_state["objects"][obj]["visible"] == True]) > 0
     return str(ingredient_available).lower()
 
 # get the status of a pot

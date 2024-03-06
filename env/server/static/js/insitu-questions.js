@@ -39,13 +39,26 @@ function randomFromList(l) {
 
 // generate the questions to ask the user at each question point
 function generateInSituQuestions() {
-    categories = ["SA1 ingredientloc", "SA1 playerloc", "SA1 potstate", /*"SA2 playerstate", "SA2 teammatestate", /*"SA3 playerplan", "SA3 teammateplan",*/ "SA3 numremaining"]
+    categories = ["SA1 ingredientloc", "SA1 playerloc", "SA1 potstate", "SA2 playerstate", "SA2 numremaining", /*"SA3 playerplan", "SA3 teammateplan",*/]
     ingredients = ["<b style='color:goldenrod'>Onion</b>", "<b style='color:red'>Tomato</b>"]
 
     // generate n questions
     for (let i = 0; i < 2; i++) {
-        // pick the category
-        category = randomFromList(categories)
+        // filter the applicable categories to remove question categories that have been asked
+        applicableCategories = []
+        categories.foreach((category) => {
+            if (!askedQuestions.contains(category)) {
+                applicableCategories.add(category)
+            }
+        })
+        if (applicableCategories.length == 0) {  // if all categories have been asked, reset the categories
+            applicableCategories = categories
+            askedQuestions = []
+        }
+
+        // select a category
+        category = randomFromList(applicableCategories)
+        askedQuestions.add(category)
 
         // remove selected category from the possible categories
         categories.splice(categories.indexOf(category), 1)
@@ -58,7 +71,7 @@ function generateInSituQuestions() {
                 inSituQuestions.push(["Where is the nearest available " + ingredient + "? Make your best guess.", "multiple choice", ["Left half", "Right half", "Center-ish", "None available", "No idea"]])
             }
             else if (questionType == "exists") {
-                inSituQuestions.push(["Is there at least one available " + ingredient + "? Make your best guess.", "multiple choice", ["Definite YES", "Likely YES", "Unsure", "Likely NO", "Definite NO"]])
+                inSituQuestions.push(["Is there at least one available " + ingredient + "? Make your best guess.", "multiple choice", ["Definite YES", "Likely YES", "No idea", "Likely NO", "Definite NO"]])
             }
         }
         // teammate location
@@ -85,11 +98,23 @@ function generateInSituQuestions() {
         }
         // player state
         else if (category == "SA2 playerstate") {
-            inSituQuestions.push(["What are <b style='color:#009966'>YOU</b> doing now?", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete"]])
+            player = randomFromList(["you", "teammate"])
+            if (questionType == "you") {
+                inSituQuestions.push(["What are <b style='color:#009966'>YOU</b> doing now?", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete"]])
+            }
+            else if (questionType == "teammate") {
+                inSituQuestions.push(["What is your <b style='color:blue'>TEAMMATE</b> doing now? Make your best guess.", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete", "No idea"]])
+            }
         }
-        // teammate state
-        else if (category == "SA2 teammatestate") {
-            inSituQuestions.push(["What is your <b style='color:blue'>TEAMMATE</b> doing now? Make your best guess.", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete", "No idea"]])
+        // number of dishes remaining
+        else if (category == "SA2 numremaining") {
+            questionType = randomFromList(["cancook", /*"willcomplete"*/])  // ignoring the S3 questions
+            if (questionType == "cancook") {
+                inSituQuestions.push(["How many more soups can be made/delivered, including soups in-progress? Make your best guess.", "multiple choice", ["No soups", "1-2 soups", "3-4 soups", "5+ soups", "No idea"]])
+            }
+            else if (questionType == "willcomplete") {
+                inSituQuestions.push(["Do you think your team will complete all the dishes in time?", "multiple choice", ["YES or already complete", "Probably YES", "Not sure", "Probably NO", "Definite NO"]])
+            }
         }
         // player plan
         else if (category == "SA3 playerplan") {
@@ -98,16 +123,6 @@ function generateInSituQuestions() {
         // teammate plan
         else if (category == "SA3 teammateplan") {
             inSituQuestions.push(["What will your <b style='color:blue'>TEAMMATE</b> be doing ~10 seconds from now? Make your best guess.", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling", "No idea"]])
-        }
-        // number of dishes remaining
-        else if (category == "SA3 numremaining") {
-            questionType = randomFromList(["cancook", "willcomplete"])
-            if (questionType == "cancook") {
-                inSituQuestions.push(["How many more soups can be made/delivered, including soups in-progress? Make your best guess.", "multiple choice", ["No soups", "1-2 soups", "3-4 soups", "5+ soups", "No idea"]])
-            }
-            else if (questionType == "willcomplete") {
-                inSituQuestions.push(["Do you think your team will complete all the dishes in time?", "multiple choice", ["YES or already complete", "Probably YES", "Not sure", "Probably NO", "Definite NO"]])
-            }
         }
     }
 
