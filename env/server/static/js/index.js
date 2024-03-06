@@ -376,6 +376,7 @@ function endStage() {
 
     // hide the in situ questions
     hideInSituQuestions()
+    askedQuestions = []
 
     // update the study stage
     studyStage = studyStages[studyStages.indexOf(studyStage)+1]

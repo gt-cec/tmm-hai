@@ -56,15 +56,24 @@ def grade_user(user:str, round:int, debug=False):
         lines = f.readlines()  # read every line of the log
         num_lines = len(lines)
         state = None  # the current game state
-        smm_ground_truth = smm.smm.SMM("predicates", visibility="O99")  # logical predicates SMM using full observability, represents ground truth
-        smm_agent = smm.smm.SMM("predicates", visibility="O99")  # logical predicates SMM for the agent, uses the visible ground truth data
-        smm_user = smm.smm.SMM("predicates", visibility="D4")  # logical predicates SMM for the user, uses the agent's belief
-        score = 0
+        true_model = smm.smm.SMM("predicates", visibility="O20", agent="A0")  # robot model with full observability, ground truth
+        agent_model = smm.smm.SMM("predicates", visibility="O4", agent="A0")  # robot model with partial observability
+        estimated_human_model = smm.smm.SMM("predicates", visibility="D4", agent="A1")  # estimated human model with partial observability
+
+        # scores
+        user_score_wrt_true = 0
+        agent_score_wrt_true = 0
+        estimated_human_score_wrt_true = 0
+        true_score_wrt_user = 0
+        agent_score_wrt_user = 0
+        estimated_human_score_wrt_user = 0
+        
         num_questions = 0
         line_count = 1
+        first_view = True
         for line in lines:
             # keep track of progress
-            if line_count % 100 == 0 and smm_ground_truth.initialized:
+            if line_count % 100 == 0 and true_model.initialized:
                 print("    ", int(100 * line_count / num_lines), "%", "[", user,"]")
             line_count += 1
 
@@ -76,56 +85,89 @@ def grade_user(user:str, round:int, debug=False):
                     continue
 
                 # initialize the SMMs if they have not been initialized
-                if not smm_ground_truth.initialized:
-                    smm_ground_truth.init_belief_state_from_file(layout)
-                if not smm_agent.initialized:
-                    smm_agent.init_belief_state_from_file(layout)
-                if not smm_user.initialized:
-                    smm_user.init_belief_state_from_file(layout)
+                if not true_model.initialized:
+                    true_model.init_belief_state_from_file(state["layout"] + ".layout")
 
-                observed_state = smm_ground_truth.convert_log_to_state(state)
-                smm_ground_truth.update(state=observed_state, debug=False)  # update the ground truth SMM
-                smm_agent.update(state=smm_ground_truth.belief_state, debug=debug)  # update the agent's SMM from the ground truth
+                # update the mental models
+                state = true_model.convert_log_to_state(state)
+                true_model.update(state, debug=False)
+                true_belief_state = true_model.get_visible_belief_state()
 
-            if not smm_ground_truth.initialized:
+                if first_view:
+                    agent_model.model.domain_knowledge = true_belief_state
+                    estimated_human_model.model.domain_knowledge = true_belief_state
+                    first_view = False
+
+                agent_model.update(true_belief_state, debug=False)
+                agent_belief_state = agent_model.get_visible_belief_state()
+                estimated_human_model.update(agent_belief_state, debug=False)
+
+            if not true_model.initialized:
                 continue
 
             # handle in-situ questions
             if "type" in log_dict:
-                if log_dict["type"] == "in situ":
+                if log_dict["stage"] != "round" + str(round):
+                    continue
+                if log_dict["type"] == "in situ submission":
                     question = clean_question_string(log_dict["question"])  # clean the question
-                    user_response = log_dict["response"].lower()  # get the user response                    
                     print("Question:", question)
-                    print("User Response:", user_response)
-                    # print("State:", state)
-                    ground_truth_response = answer_question(smm_ground_truth, question)
-                    print("Ground Truth Response:", ground_truth_response)
-                    if ground_truth_response is not None:  # None indicates the question is being intentionally ignored in scoring
+                    user_response = log_dict["response"].lower()  # get the user response                    
+                    true_response = answer_question(true_model, question)
+                    agent_response = answer_question(agent_model, question)
+                    estimated_human_response = answer_question(estimated_human_model, question)
+                    print("User Response:", user_response, "True Response:", true_response, "Agent Response:", agent_response, "Estimated Human Response:", estimated_human_response)
+                    if true_response is not None:  # None indicates the question is being intentionally ignored in scoring
                         # score the responses
-                        _score = score_response(user_response, ground_truth_response)
-                        score += _score
+                        # user w.r.t. truth
+                        _user_score_wrt_true = score_response(question, user_response, true_response)
+                        user_score_wrt_true += _user_score_wrt_true
+                        # agent w.r.t. truth
+                        _agent_score_wrt_true = score_response(question, agent_response, true_response)
+                        agent_score_wrt_true += _agent_score_wrt_true
+                        # estimated human w.r.t. truth
+                        _estimated_human_score_wrt_true = score_response(question, estimated_human_response, true_response)
+                        estimated_human_score_wrt_true += _estimated_human_score_wrt_true
+                        # truth w.r.t. user
+                        _true_score_wrt_user = score_response(question, true_response, user_response)
+                        true_score_wrt_user += _true_score_wrt_user
+                        # agent w.r.t. user
+                        _agent_score_wrt_user = score_response(question, agent_response, user_response)
+                        agent_score_wrt_user += _agent_score_wrt_user
+                        # estimated human w.r.t. user
+                        _estimated_human_score_wrt_user = score_response(question, estimated_human_response, user_response)
+                        estimated_human_score_wrt_user += _estimated_human_score_wrt_user
                         num_questions += 1
                         if question not in responses:  # ensure the question is in the seen responses
                             responses[question] = []
-                        responses[question].append([user_response, ground_truth_response, _score, smm_ground_truth.belief_state])  # add the record for the question
-    print("User:", user, "Round", round, "Score:", score, "/", num_questions)
-    return responses, score, num_questions
+                        responses[question].append([user_response, true_response, _user_score_wrt_true, _true_score_wrt_user, agent_response, _agent_score_wrt_true, _agent_score_wrt_user, estimated_human_response, _estimated_human_score_wrt_true, _estimated_human_score_wrt_user])  # add the record for the question
+    print("User:", user, "Round", round, "True Score:", user_score_wrt_true, "Agent Score:", agent_score_wrt_user, "Estimated Human Score:", estimated_human_score_wrt_user, "/", num_questions)
+    return responses, user_score_wrt_true, agent_score_wrt_true, estimated_human_score_wrt_true, true_score_wrt_user, agent_score_wrt_user, estimated_human_score_wrt_user, num_questions
 
 # score a question's response between 0 (incorrect) and 1 (correct)
 #   candidate_response: the user or agent's response
 #   ground_truth_response: the oracle's response
-def score_response(candidate_response:str, ground_truth_response:str)->int:
+def score_response(question:str, candidate_response:str, ground_truth_response:str)->int:
     # edge case catching
-    if candidate_response is None or candidate_response == "" or ground_truth_response is None or ground_truth_response == "":
-        raise ValueError("Candidate and ground truth responses must be non-empty strings!")
+    if question is None or question == "" or candidate_response is None or candidate_response == "" or ground_truth_response is None or ground_truth_response == "":
+        raise ValueError("Question, candidate, and ground truth responses must be non-empty strings!")
 
     candidate_response = candidate_response.lower()
     ground_truth_response = ground_truth_response.lower()
 
     score = 0
 
-    # position questions: score 1 for correct, 1 for center-leaning (e.g., user:right, truth:center-right), and 0 otherwise; split across horizontal and vertical components of the response
-    if candidate_response in LOCATION and ground_truth_response in LOCATION:
+    # location questions
+    if "where are you" in question or "where is your teammate" in question or "where is the nearest available" in question:
+        # position questions: score 1 for correct, 1 for center-leaning (e.g., user:right, truth:center-right), and 0 otherwise; split across horizontal and vertical components of the response
+        if candidate_response not in LOCATION or ground_truth_response not in LOCATION:
+            raise ValueError("Impossible question response")
+        if "-r" in candidate_response or "-l" in candidate_response or "-ish" in ground_truth_response or "half" in ground_truth_response or ground_truth_response == "center":
+            _resp = candidate_response
+            candidate_response = ground_truth_response
+            ground_truth_response = _resp
+        if candidate_response == "no idea" or ground_truth_response == "no idea":
+            return 0
         candidate_response = "center center" if candidate_response == "center" or candidate_response == "center-ish" else candidate_response
         candidate_split = candidate_response.split(" ")
         ground_truth_split = ground_truth_response.split(" ")
@@ -152,45 +194,72 @@ def score_response(candidate_response:str, ground_truth_response:str)->int:
             score += 0.5
         # return if scored
         return score
-    
-    # action questions: score 1 for correct, 0 otherwise
-    if candidate_response in RECIPE and ground_truth_response in smm_to_recipe:
+    # action questions
+    elif "what are you doing" in question or "what is your teammate doing" in question:
+        if ground_truth_response in RECIPE and candidate_response in smm_to_recipe:
+            _resp = candidate_response
+            candidate_response = ground_truth_response
+            ground_truth_response = _resp
         ground_truth_response = smm_to_recipe[ground_truth_response]
         if "idling" in ground_truth_response and "idling" in candidate_response:
             score += 1
         elif ground_truth_response == candidate_response:
             score += 1
         return score
-    
-    # player status questions: score 1 for correct, 0 otherwise
-    if candidate_response in PLAYER_STATUS and ground_truth_response in smm_to_recipe:
-        ground_truth_response = smm_to_recipe[ground_truth_response]
-        if "idling" in ground_truth_response and "idling" in candidate_response:
-            score += 1
-        elif ground_truth_response == candidate_response:
-            score += 1
-        return score
-    
-    # pot full questions: score 1 for correct, 0 otherwise
-    if candidate_response in POT_FULL and ground_truth_response in POT_FULL:
-        if ground_truth_response == candidate_response:
-            score += 1
-        return score
-    
-    # pot status questions: score 1 for correct, 0 otherwise
-    if candidate_response in POT_STATUS and ground_truth_response in POT_STATUS:
-        if ground_truth_response == candidate_response:
-            score += 1
-        return score
-    
-    # soups remaining questions: score 1 for correct, 0 otherwise
-    if "soups" in candidate_response and "soups" in ground_truth_response:
+    # What will you/teammate be doing in ~10 seconds from now?
+    elif "what will you be doing ~10 seconds from now" in question or "what will your teammate be doing ~10 seconds from now" in question:
+        response = None  # get_future_action_semantic(smm, "player")
+    # How many more soups can be made/delivered, including soups in-progress?
+    elif "how many more soups" in question:
+        if ("soups" not in candidate_response and candidate_response != "no idea") or ("soups" not in ground_truth_response and ground_truth_response != "no idea"):
+            raise ValueError("Impossible question answer " + candidate_response + " " + ground_truth_response)
+        if "-" in ground_truth_response or "+" in ground_truth_response or "no" in ground_truth_response:
+            _resp = candidate_response
+            candidate_response = ground_truth_response
+            ground_truth_response = _resp
         ground_truth_soups = int(ground_truth_response.split(" ")[0])
         candidate_response = "1-2 soups" if "1" in candidate_response or "2" in candidate_response else "3-4 soups" if "3" in candidate_response or "4" in candidate_response else candidate_response
         ground_truth_response = "1-2 soups" if ground_truth_soups in [1, 2] else "3-4 soups" if ground_truth_soups >= 3 else ground_truth_response
         if ground_truth_response == candidate_response:
             score += 1
         return score
+    # What is the leftmost/rightmost pot's status?
+    elif "pot's status" in question:
+        if candidate_response not in POT_STATUS or ground_truth_response not in POT_STATUS:
+            raise ValueError("Impossible question answer")
+        if ground_truth_response == candidate_response:
+            score += 1
+        return score
+    # How full is the leftmost/rightmost pot?
+    elif "how full" in question:
+        if candidate_response not in POT_FULL or ground_truth_response not in POT_FULL:
+            raise ValueError("Impossible question answer")
+        if ground_truth_response == candidate_response:
+            score += 1
+        return score
+    # Is there at one available onion/tomato?
+    elif "is there at least one available" in question:
+        if ground_truth_response in INGREDIENT_AVAILABLE and candidate_response not in INGREDIENT_AVAILABLE:
+            _resp = candidate_response
+            candidate_response = ground_truth_response
+            ground_truth_response = _resp
+        
+        if candidate_response == "definite yes" and ground_truth_response == "true":
+            score += 1
+        elif candidate_response == "likely yes" and ground_truth_response == "true":
+            score += .5
+        elif candidate_response == "unsure" or candidate_response == "no idea":
+            score += .25
+        elif candidate_response == "likely no" and ground_truth_response == "false":
+            score += .5
+        elif candidate_response == "definite no" and ground_truth_response == "false":
+            score += 1
+        return score
+    # Do you think your team will complete all the dishes in time?
+    elif "complete all the dishes" in question:
+        response = None  # not worried about level 3 yet
+    else:
+        raise ValueError("SMM is trying to answer a question that is not handled: " + question)
 
     # completion likelihood questions: score 1 for correct, 0 otherwise
     if candidate_response in COMPLETION_LIKELIHOOD and ground_truth_response in COMPLETION_LIKELIHOOD:
@@ -198,21 +267,12 @@ def score_response(candidate_response:str, ground_truth_response:str)->int:
             score += 1
         return score
     
-    # ingredient available questions: score 1 for correct, 0.5 for correct likely, 0.25 for unsure, 0 otherwise
-    if candidate_response in INGREDIENT_AVAILABLE:
-        if candidate_response == "definite yes" and ground_truth_response == "true":
-            score += 1
-        elif candidate_response == "likely yes" and ground_truth_response == "true":
-            score += .5
-        elif candidate_response == "unsure":
-            score += .25
-        elif candidate_response == "likely no" and ground_truth_response == "false":
-            score += .5
-        elif candidate_response == "definite no" and ground_truth_response == "false":
-            score += 1
+    # binary questions 
+    if candidate_response in ["true", "false"] and ground_truth_response == candidate_response:
+        score += 1
         return score
 
-    raise ValueError("Reached end of response scoring without catching the response type, responses were: (cand)" + str(candidate_response) + ", (truth)" + str(ground_truth_response))
+    raise ValueError("Reached end of response scoring without catching the response type, responses were: " + question + " cand: " + str(candidate_response) + ", truth: " + str(ground_truth_response))
 
 # get the SMM's response to a question
 def answer_question(smm:smm.smm.SMM, question):
@@ -336,7 +396,7 @@ def get_remaining_soups(smm:smm.smm.SMM)->str:
 
 # get whether an ingredient is available
 def get_ingredient_available(smm:smm.smm.SMM, ingredient:str)->str:
-    ingredient_available = len([obj for obj in smm.belief_state["objects"] if ingredient in smm.belief_state["objects"][obj]["propertyOf"]["name"]]) > 0
+    ingredient_available = len([obj for obj in smm.belief_state["objects"] if ingredient in smm.belief_state["objects"][obj]["propertyOf"]["name"] and smm.belief_state["objects"][obj]["visible"] == True]) > 0
     return str(ingredient_available).lower()
 
 # get the status of a pot

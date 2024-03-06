@@ -5,11 +5,15 @@ import smm.models.predicates
 import smm.models.fuzzy
 
 class SMM:
-    def __init__(self, model:str, visibility:str):
+    # the mental model class
+    #   model: name of the model to use
+    #   visibility: visibility of the agent (O, D, V type and radius/range, e.g., O4 will be a circle of radius 4 units)
+    #   agent: name of the agent to follow, for our domains A0 is the robot and A1 is the human
+    def __init__(self, model:str, visibility:str, agent:str):
         if model == "predicates":
-            self.model = smm.models.predicates.SMMPredicates()
+            self.model = smm.models.predicates.SMMPredicates(can_see=self.can_see)
         elif model == "fuzzy":
-            self.model = smm.models.fuzzy.SMMFuzzy()
+            self.model = smm.models.fuzzy.SMMFuzzy(can_see=self.can_see)
         else:
             raise ValueError("Failed to initialize SMM, model must be 'predicates' or 'fuzzy'")
         if visibility[0] not in ["O", "D", "V"]:
@@ -19,7 +23,7 @@ class SMM:
             raise ValueError("Incorrect visibility range, visibility must be of the format (type)(range), e.g., V5, O2, D99")
         self.visibility_range = int(visibility[1:])
         self.belief_state = {}  # the belief state output by the SMM
-        self.agent_name = 0
+        self.agent_name = agent
         self.initialized = False
 
     # loads an initial belief state from a layout dictionary
@@ -44,6 +48,22 @@ class SMM:
         with open("env/server/layouts/" + layout, "r") as f:
             layout = ast.literal_eval(f.read())
             self.init_belief_state(layout)
+
+    # gets the visible portion of a belief state
+    def get_visible_belief_state(self):
+        for k in self.belief_state["objects"]:
+            if not self.belief_state["objects"][k]["visible"]:
+                pass
+                # print("IGNORING", k, self.belief_state["objects"][k])
+        visible_belief_state = {
+            # return all agents, because agents are always visible
+            "agents": copy.deepcopy(self.belief_state["agents"]),
+            # return objects that have a True "visible" property
+            "objects": {
+                k : copy.deepcopy(self.belief_state["objects"][k]) for k in self.belief_state["objects"] if self.belief_state["objects"][k]["visible"]
+            }
+        }
+        return visible_belief_state
     
     # updates the model by filtering state visibility and shunting over to the model
     #   from_log: dictionary from a log file, representing raw observations from the game
@@ -55,22 +75,24 @@ class SMM:
 
     # filter out objects and agents that are not immediately visible
     def filter_visibility(self, state:dict):
-        agent_position = state["agents"]["A" + str(self.agent_name)]["position"] #if state_type == "log" else state["agents"]["A" + str(self.agent_name)]["position"]
-        agent_orientation = state["agents"]["A" + str(self.agent_name)]["facing"] #if state_type == "log" else state["agents"]["A" + str(self.agent_name)]["facing"]
+        agent_position = state["agents"][self.agent_name]["position"] #if state_type == "log" else state["agents"]["A" + str(self.agent_name)]["position"]
+        agent_orientation = state["agents"][self.agent_name]["facing"] #if state_type == "log" else state["agents"]["A" + str(self.agent_name)]["facing"]
 
         # filter out objects
-        for o in state["objects"]: #if state_type == "log" else state["objects"]):
+        object_ids = [x for x in state["objects"]]
+        for o in object_ids: #if state_type == "log" else state["objects"]):
             dX = state["objects"][o]["position"][0] - agent_position[0] #if state_type == "log" else state["objects"][o]["position"][0] - agent_position[0]
             dY = state["objects"][o]["position"][1] - agent_position[1] #if state_type == "log" else state["objects"][o]["position"][1] - agent_position[1]
             if not self.can_see(agent_orientation, dX, dY):
                 del state["objects"][o]
         
         # filter out other agents
-        for a in state["agents"]: #if state_type == "log" else state["agents"]):
-            dX = state["agents"][a]["position"][0] - agent_position[0] #if state_type == "log" else state["agents"][a]["position"][0] - agent_position[0]
-            dY = state["agents"][a]["position"][1] - agent_position[1] #if state_type == "log" else state["agents"][a]["position"][1] - agent_position[1]
-            if not self.can_see(agent_orientation, dX, dY):
-                del state["agents"][a]
+        # agent_ids = [x for x in state["agents"]]
+        # for a in agent_ids: #if state_type == "log" else state["agents"]):
+        #     dX = state["agents"][a]["position"][0] - agent_position[0] #if state_type == "log" else state["agents"][a]["position"][0] - agent_position[0]
+        #     dY = state["agents"][a]["position"][1] - agent_position[1] #if state_type == "log" else state["agents"][a]["position"][1] - agent_position[1]
+        #     if not self.can_see(agent_orientation, dX, dY):
+        #         del state["agents"][a]
         
         return state
 
@@ -128,8 +150,9 @@ class SMM:
                 "position": log["state"]["objects"][i]["position"],
                 "propertyOf": {
                     "name": log["state"]["objects"][i]["name"],
-                    "title": "O" + str(i+1) + "-" + log["state"]["objects"][i]["name"],
-                }
+                },
+                "visible": True,  # by default, model assumes objects are visible
+                "canUseWith": []  # by default, the model does not know what objects can be used with
             }
 
             # if the object has ingredients, set those
