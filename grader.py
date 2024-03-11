@@ -116,7 +116,7 @@ def grade_user(user:str, round:int, debug=False):
                     true_response = answer_question(true_model, question)
                     agent_response = answer_question(agent_model, question)
                     estimated_human_response = answer_question(estimated_human_model, question)
-                    print("User Response:", user_response, "True Response:", true_response, "Agent Response:", agent_response, "Estimated Human Response:", estimated_human_response)
+                    print("User Response:", user_response, "True Response:", true_response, "Agent Response:", agent_response, "Estimated Human Response:", estimated_human_response, "User Score:", score_response(question, user_response, true_response))
                     if true_response is not None:  # None indicates the question is being intentionally ignored in scoring
                         # score the responses
                         # user w.r.t. truth

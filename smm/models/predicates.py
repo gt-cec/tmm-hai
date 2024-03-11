@@ -269,7 +269,7 @@ class SMMPredicates:
             print("[Start] Seen Objects:", [objects[o]["propertyOf"]["name"] + (":" + "+".join([x["propertyOf"]["name"] for x in objects[o]["propertyOf"]["ingredients"]]) if "ingredients" in objects[o]["propertyOf"] else "") + " at " + str(objects[o]["position"]) for o in objects])
             print("[Start] Known Objects:", [known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
         if len(str([known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects]).split("soup")) > 2:
-            print("[DEBUG] Known Objects:", [k + " " + known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
+            # print("[DEBUG] Known Objects:", [k + " " + known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
             pass
 
         soups_delta_ingredients = {}  # soups that have stayed in the same location but now have ingredients to be assigned
@@ -508,7 +508,8 @@ class SMMPredicates:
                             closest_ks.append(k)
                             closest_k_dist = dist
                 if closest_ks is None:  # sanity check
-                    raise ValueError("Could not figure out an unmatched known ingredient to add to this soup! Debug this!")
+                    break
+                    # raise ValueError("Could not figure out an unmatched known ingredient to add to this soup! Debug this!")
                 # choose the best k, the priority order is simply: 1) the known ingredient has a holder, 2) anything else
                 closest_k_holder = None
                 for k in closest_ks:

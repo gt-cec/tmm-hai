@@ -42,7 +42,7 @@ if __name__ == "__main__":
     responses_by_round, responses_by_user, responses_by_user_and_round, responses_by_question, scores_by_user_and_round = load_data()
 
     ### plot the line graph of user performance over each round
-    # plots.line.plot_line_matrix_scores_by_round(scores_by_user_and_round, category="user wrt full")
+    plots.line.plot_line_matrix_scores_by_round(scores_by_user_and_round, category="user wrt full")
 
     ### plot the violin plot of performances at each round
     # plots.violin.plot_violin_scores_by_round(scores_by_user_and_round, category="user wrt full")

@@ -83,7 +83,7 @@ function generateInSituQuestions() {
         askedQuestions.push(category)
 
         // remove selected category from the possible categories
-        categories.splice(categories.indexOf(category), 1)
+        // categories.splice(categories.indexOf(category), 1)
     
         // ingredient location
         if (category == "SA1 ingredientloc") {
