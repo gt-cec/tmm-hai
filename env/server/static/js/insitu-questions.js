@@ -120,7 +120,7 @@ function generateInSituQuestions() {
         }
         // player state
         else if (category == "SA2 playerstate") {
-            player = randomFromList(["you", "teammate"])
+            questionType = randomFromList(["you", "teammate"])
             if (questionType == "you") {
                 inSituQuestions.push(["What are <b style='color:#009966'>YOU</b> doing now?", "multiple choice", ["Getting ingredient for pot", "Getting dish for soup", "Bringing soup to station", "Idling, all soups complete"]])
             }
