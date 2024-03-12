@@ -112,6 +112,9 @@ def grade_user(user:str, round:int, debug=False):
                 if log_dict["type"] == "in situ submission":
                     question = clean_question_string(log_dict["question"])  # clean the question
                     print("Question:", question)
+                    # ignore the completion question
+                    if "do you think your team" in question:
+                        continue
                     user_response = log_dict["response"].lower()  # get the user response                    
                     true_response = answer_question(true_model, question)
                     agent_response = answer_question(agent_model, question)
@@ -172,23 +175,30 @@ def score_response(question:str, candidate_response:str, ground_truth_response:s
         candidate_split = candidate_response.split(" ")
         ground_truth_split = ground_truth_response.split(" ")
         # judge horizontal response
-        if "center-right" in ground_truth_split[0] and ("center" in candidate_split[0] or "right" in candidate_split[0]):
+        if "center-right" in ground_truth_response and ("center" in candidate_split[1] or "right" in candidate_response):
             score += 0.5
-        elif "right" in ground_truth_split[0] and "right" in candidate_split[0]:
+        elif "right" in ground_truth_response and "right" in candidate_response:
             score += 0.5
-        elif "center-left" in ground_truth_split[0] and ("center" in candidate_split[0] or "left" in candidate_split[0]):
+        elif "center-left" in ground_truth_response and ("center" in candidate_split[1] or "left" in candidate_response):
             score += 0.5
-        elif "left" in ground_truth_split[0] and "left" in candidate_split[0]:
+        elif "left" in ground_truth_response and "left" in candidate_response:
+            score += 0.5
+        elif ground_truth_split[1] == "center" and candidate_split[1] == "center":
             score += 0.5
         # judge vertical response
-        if "center-top" in ground_truth_split[1] and ("center" in candidate_split[1] or "top" in candidate_split[1]):
+        if "center-top" in ground_truth_response and ("center" in candidate_split[0] or "top" in candidate_response):
             score += 0.5
-        elif "top" in ground_truth_split[1] and "top" in candidate_split[1]:
+        elif "top" in ground_truth_response and "top" in candidate_response:
             score += 0.5
-        elif "center-bottom" in ground_truth_split[1] and ("center" in candidate_split[1] or "bottom" in candidate_split[1]):
+        elif "center-bottom" in ground_truth_response and ("center" in candidate_split[0] or "bottom" in candidate_response):
             score += 0.5
-        elif "bottom" in ground_truth_split[1] and "bottom" in candidate_split[1]:
+        elif "bottom" in ground_truth_response and "bottom" in candidate_response:
             score += 0.5
+        elif ground_truth_split[0] == "center" and candidate_split[0] == "center":
+            score += 0.5
+        # judge the correct center response
+        if ground_truth_response == "center center" and candidate_response == "center center":
+            score += 1
         # add 0.5 for half if the score if already 0.5, so "right half" is 1 when on the right side
         if score > 0 and "half" in candidate_response:
             score += 0.5
@@ -218,8 +228,8 @@ def score_response(question:str, candidate_response:str, ground_truth_response:s
             candidate_response = ground_truth_response
             ground_truth_response = _resp
         ground_truth_soups = int(ground_truth_response.split(" ")[0])
-        candidate_response = "1-2 soups" if "1" in candidate_response or "2" in candidate_response else "3-4 soups" if "3" in candidate_response or "4" in candidate_response else candidate_response
-        ground_truth_response = "1-2 soups" if ground_truth_soups in [1, 2] else "3-4 soups" if ground_truth_soups >= 3 else ground_truth_response
+        candidate_response = "0 soups" if "no soups" in candidate_response or "0" in candidate_response else "1-2 soups" if "1" in candidate_response or "2" in candidate_response else "3-4 soups" if "3" in candidate_response or "4" in candidate_response else "5+ soups" if "5" in candidate_response or "6" in candidate_response else candidate_response
+        ground_truth_response = "0 soups" if "no soups" in ground_truth_response or ground_truth_response[0] == "0" else "1-2 soups" if ground_truth_soups in [1, 2] else "3-4 soups" if ground_truth_soups in [3, 4] else "5+ soups" if ground_truth_soups >= 5 else ground_truth_response
         if ground_truth_response == candidate_response:
             score += 1
         return score
@@ -247,11 +257,11 @@ def score_response(question:str, candidate_response:str, ground_truth_response:s
         if candidate_response == "definite yes" and ground_truth_response == "true":
             score += 1
         elif candidate_response == "likely yes" and ground_truth_response == "true":
-            score += .5
+            score += 1
         elif candidate_response == "unsure" or candidate_response == "no idea":
-            score += .25
+            score += 0
         elif candidate_response == "likely no" and ground_truth_response == "false":
-            score += .5
+            score += 1
         elif candidate_response == "definite no" and ground_truth_response == "false":
             score += 1
         return score

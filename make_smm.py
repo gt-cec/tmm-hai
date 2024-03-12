@@ -260,4 +260,4 @@ def visualize(models:list, titles:list, game_round:str="practice"):
     plt.pause(0.1)
 
 if __name__ == "__main__":
-    run_smm("5d4a41890e604c00011ade8b", 1)
+    run_smm("5f52e45ad408d55fa156aa21", 1)
