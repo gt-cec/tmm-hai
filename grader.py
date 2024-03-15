@@ -40,7 +40,7 @@ def clean_question_string(text):
     return re.sub(clean, '', text).lower()
 
 # processes a user's logs to determine their accuracy
-def grade_user(user:str, round:int, debug=False):
+def grade_user(user:str, round:int, visibility:str, debug=False):
     # get the layout from the round
     layout = [x for x in rounds if rounds[x] == round]
     layout = None if len(layout) == 0 else layout[0]
@@ -57,7 +57,7 @@ def grade_user(user:str, round:int, debug=False):
         num_lines = len(lines)
         state = None  # the current game state
         true_model = smm.smm.SMM("predicates", visibility="O20", agent="A0")  # robot model with full observability, ground truth
-        agent_model = smm.smm.SMM("predicates", visibility="O4", agent="A0")  # robot model with partial observability
+        agent_model = smm.smm.SMM("predicates", visibility=visibility, agent="A0")  # robot model with partial observability
         estimated_human_model = smm.smm.SMM("predicates", visibility="D4", agent="A1")  # estimated human model with partial observability
 
         # scores

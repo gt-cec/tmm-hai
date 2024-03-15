@@ -1,8 +1,9 @@
 import grader  # for running through a user and grading them with the various SMMs
 import pickle  # for saving pickled data
 import os  # for pulling all files in a directory
+import sys  # for args
 
-def main():
+def main(visibility:str):
     question_responses = {}  # responses invariant to the user nor round
     round_responses = {}  # responses for each round, invariant of the user
     user_responses = {}  # responses for each user, invariant of the round
@@ -36,8 +37,9 @@ def main():
                 structured_scores[user][round] = {}
 
             # run through the round and gather the Q/A for the user and mental models
-            if user + "_" + str(round) in processed_users:  # if the user has already been processed, use that instead
-                with open(processed_user_data_path + user + "_" + str(round) + ".pkl", "rb") as f:
+            filename = user + "_" + str(round) + "_" + visibility
+            if filename in processed_users:  # if the user has already been processed, use that instead
+                with open(processed_user_data_path + filename + ".pkl", "rb") as f:
                     user_data = pickle.load(f)
                     responses = user_data[0]
                     user_score_wrt_true = user_data[1]
@@ -49,8 +51,8 @@ def main():
                     num_questions = user_data[7]
             else:  # otherwise, process the user logs
                 # this will create new SMMs, so data does not carry over between users and rounds
-                responses, user_score_wrt_true, agent_score_wrt_true, estimated_human_score_wrt_true, true_score_wrt_user, agent_score_wrt_user, estimated_human_score_wrt_user, num_questions = grader.grade_user(user=user, round=round, debug=False)
-                with open(processed_user_data_path + user + "_" + str(round) + ".pkl", "wb") as f:  # save the user's data
+                responses, user_score_wrt_true, agent_score_wrt_true, estimated_human_score_wrt_true, true_score_wrt_user, agent_score_wrt_user, estimated_human_score_wrt_user, num_questions = grader.grade_user(user=user, round=round, visibility=visibility, debug=False)
+                with open(processed_user_data_path + filename + ".pkl", "wb") as f:  # save the user's data
                     pickle.dump([responses, user_score_wrt_true, agent_score_wrt_true, estimated_human_score_wrt_true, true_score_wrt_user, agent_score_wrt_user, estimated_human_score_wrt_user, num_questions], f)
 
             # record the score information
@@ -80,17 +82,21 @@ def main():
                     structured_responses[user][round][question].append(response)
 
     # save the responses
-    with open(processed_user_data_path + "smm_responses_by_question.pkl", "wb") as f:
+    with open(processed_user_data_path + visibility + "_smm_responses_by_question.pkl", "wb") as f:
         pickle.dump(question_responses, f)
-    with open(processed_user_data_path + "smm_responses_by_round.pkl", "wb") as f:
+    with open(processed_user_data_path + visibility + "_smm_responses_by_round.pkl", "wb") as f:
         pickle.dump(round_responses, f)
-    with open(processed_user_data_path + "smm_responses_by_user.pkl", "wb") as f:
+    with open(processed_user_data_path + visibility + "_smm_responses_by_user.pkl", "wb") as f:
         pickle.dump(user_responses, f)
-    with open(processed_user_data_path + "smm_responses_by_user_and_round.pkl", "wb") as f:
+    with open(processed_user_data_path + visibility + "_smm_responses_by_user_and_round.pkl", "wb") as f:
         pickle.dump(structured_responses, f)
-    with open(processed_user_data_path + "smm_scores_by_user_and_round.pkl", "wb") as f:
+    with open(processed_user_data_path + visibility + "_smm_scores_by_user_and_round.pkl", "wb") as f:
         pickle.dump(structured_scores, f)
     
     print("Processing complete! See the output .pkl files.")
 
-main()
+if __name__ == "__main__":
+    visibility = sys.argv[1]
+    if visibility is None or visibility[0] not in ["V", "O", "D"] or visibility[1] not in ["1", "2", "3", "4", "5", "6", "7", "8", "9"]:  # check the visibility
+        raise ValueError("Invalid visibility argument! Must be of type O, D, V, and radii 1-9, for example, O4")
+    main(visibility=visibility)

@@ -8,6 +8,7 @@ import plots.line
 import plots.violin
 import pickle
 import grader  # for some lookup tables
+import sys
 
 # create the color map
 colors = [(0, (1, 1, 1)), (.1, (1, 0.517, 0.156)), (.25, (1, .466, .168)), (.4, (1, .364, .137)), (.55, (1, .305, .196)), (.7, (.980, .282, .227)), (.85, (.866, .215, .180)), (.9, (.713, .176, .160)), (1, (.556, .223, .184))]
@@ -23,15 +24,18 @@ matplotlib.rcParams["font.size"] = 15
 
 # load the pickled data
 def load_data(path="./processed_data/"):
-    with open(path + "smm_responses_by_round.pkl", "rb") as f:
+    visibility = sys.argv[1]
+    if visibility is None or visibility[0] not in ["V", "O", "D"] or visibility[1] not in ["1", "2", "3", "4", "5", "6", "7", "8", "9"]:  # check the visibility
+        raise ValueError("Invalid visibility argument! Must be of type O, D, V, and radii 1-9, for example, O4")
+    with open(path + visibility + "_smm_responses_by_round.pkl", "rb") as f:
         responses_by_round = pickle.load(f)
-    with open(path + "smm_responses_by_user.pkl", "rb") as f:
+    with open(path + visibility + "_smm_responses_by_user.pkl", "rb") as f:
         responses_by_user = pickle.load(f)
-    with open(path + "smm_responses_by_user_and_round.pkl", "rb") as f:
+    with open(path + visibility + "_smm_responses_by_user_and_round.pkl", "rb") as f:
         responses_by_user_and_round = pickle.load(f)
-    with open(path + "smm_responses_by_question.pkl", "rb") as f:
+    with open(path + visibility + "_smm_responses_by_question.pkl", "rb") as f:
         responses_by_question = pickle.load(f)
-    with open(path + "smm_scores_by_user_and_round.pkl", "rb") as f:
+    with open(path + visibility + "_smm_scores_by_user_and_round.pkl", "rb") as f:
         scores_by_user_and_round = pickle.load(f)
     print("Loaded results data.")
     return responses_by_round, responses_by_user, responses_by_user_and_round, responses_by_question, scores_by_user_and_round
@@ -51,17 +55,17 @@ if __name__ == "__main__":
     # plots.histogram.plot_histogram_question_frequency(responses_by_question)
 
     ### plot the score distribution histogram
-    plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="user wrt full")  # one histogram for user average for all rounds
+    # plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="user wrt full")  # one histogram for user average for all rounds
     # plots.histogram.plot_histogram_score_each_round(responses_by_user_and_round, category="user wrt full")
-    plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="full wrt user")
+    # plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="full wrt user")
     # plots.histogram.plot_histogram_score_each_round(responses_by_user_and_round, category="full wrt user")
-    plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="robot wrt full")
+    # plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="robot wrt full")
     # plots.histogram.plot_histogram_score_each_round(responses_by_user_and_round, category="robot wrt full")
-    plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="robot wrt user")
+    # plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="robot wrt user")
     # plots.histogram.plot_histogram_score_each_round(responses_by_user_and_round, category="robot wrt user")
-    plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="human wrt full")
+    # plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="human wrt full")
     # plots.histogram.plot_histogram_score_each_round(responses_by_user_and_round, category="human wrt full")
-    plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="human wrt user")
+    plots.histogram.plot_histogram_score_all_rounds(responses_by_user_and_round, category="human wrt user", save=True)
     # plots.histogram.plot_histogram_score_each_round(responses_by_user_and_round, category="human wrt user")
 
     ### plot the responses for each user

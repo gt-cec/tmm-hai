@@ -7,12 +7,19 @@ import matplotlib.pyplot as plt
 import matplotlib
 import math
 import numpy
+import sys
 
 
 axes = None  # matplotlib plots
 G = None  # networkx graph
 node_colors = None  # networkx node colors
 classes = ["pot", "soup", "station", "onion", "tomato", "dish"]
+human_image = matplotlib.pyplot.imread("./env/server/static/images/human.png")
+robot_image = matplotlib.pyplot.imread("./env/server/static/images/robot.png")
+tomato_image = matplotlib.pyplot.imread("./env/server/static/images/tomato.png")
+onion_image = matplotlib.pyplot.imread("./env/server/static/images/onion.png")
+dish_image = matplotlib.pyplot.imread("./env/server/static/images/dish.png")
+soup_image = matplotlib.pyplot.imread("./env/server/static/images/soup.png")
 rounds = {
     "RSMM3": 1,
     "RSMM4": 2,
@@ -33,7 +40,7 @@ def run_smm(user_id, round):
     observed_model = smm.smm.SMM("predicates", visibility="O20", agent="A0")  # model that only uses observations, no updates
     true_model = smm.smm.SMM("predicates", visibility="O20", agent="A0")  # robot model with full observability, ground truth
     agent_model = smm.smm.SMM("predicates", visibility="O4", agent="A0")  # robot model with partial observability
-    human_model = smm.smm.SMM("predicates", visibility="D4", agent="A1")  # estimated human model with partial observability 
+    human_model = smm.smm.SMM("predicates", visibility=sys.argv[1], agent="A1")  # estimated human model with partial observability 
 
     # init plot
     plt.show(block=False)
@@ -141,11 +148,18 @@ def visualize(models:list, titles:list, game_round:str="practice"):
         for i in range(len(models)):
             # create a graph
             G.append(nx.grid_2d_graph(5, 10))
+
             # add the nodes
             G[i].add_nodes_from(models[i].belief_state["objects"].keys())
             G[i].add_nodes_from(models[i].belief_state["agents"].keys())
 
     for i in range(len(models)):
+        if i == 0:
+            for agent in models[i].belief_state["agents"]:
+                if models[i].belief_state["agents"][agent]["holding"] is not None:
+                    models[i].belief_state["objects"][agent + "-h"] =  models[i].belief_state["agents"][agent]["holding"]
+                    models[i].belief_state["objects"][agent + "-h"]["visible"] = True
+
         # update the nodes
         for obj in models[i].belief_state["objects"]:
             # set the node properties
@@ -190,7 +204,7 @@ def visualize(models:list, titles:list, game_round:str="practice"):
                 "facing y" : models[i].belief_state["agents"][agent]["facing"][1],
                 "holding" : models[i].belief_state["agents"][agent]["holding"],
                 "goal" : models[i].belief_state["agents"][agent]["goal"] if "goal" in models[i].belief_state["agents"][agent] else None,
-                "name": agent
+                "name": agent,
             }
             G[i].nodes[agent].update(node_properties)
 
@@ -241,7 +255,26 @@ def visualize(models:list, titles:list, game_round:str="practice"):
         margin = 0.4
         axes[i].set_xlim([0-margin, 10+margin])  # set the boundaries 
         axes[i].set_ylim([0-margin, 4+margin])  # set the boundaries
-        nx.draw(G[i], pos=pos, ax=axes[i], with_labels=True, labels=node_labels, node_size=700, node_color=node_colors, font_size=10, font_color="black", font_weight="bold", edge_color="gray", linewidths=1, alpha=0.7)
+        axes[i].set_xticks([])
+        axes[i].set_yticks([])
+        
+        # show the agents
+        axes[i].imshow(robot_image, extent=[pos["A0"][0]-0.35, pos["A0"][0]+0.35, pos["A0"][1]-0.35, pos["A0"][1]+0.35])
+        axes[i].imshow(human_image, extent=[pos["A1"][0]-0.35, pos["A1"][0]+0.35, pos["A1"][1]-0.35, pos["A1"][1]+0.35])
+
+        for node in G[i].nodes:
+            if "name" in G[i].nodes[node]:  # ignore agents
+                continue
+            if G[i].nodes[node]["class"] == "tomato":
+                axes[i].imshow(tomato_image, extent=[pos[node][0]-0.20, pos[node][0]+0.20, pos[node][1]-0.20, pos[node][1]+0.20])
+            elif G[i].nodes[node]["class"] == "onion":
+                axes[i].imshow(onion_image, extent=[pos[node][0]-0.20, pos[node][0]+0.20, pos[node][1]-0.20, pos[node][1]+0.20])
+            elif G[i].nodes[node]["class"] == "dish":
+                axes[i].imshow(dish_image, extent=[pos[node][0]-0.25, pos[node][0]+0.25, pos[node][1]-0.25, pos[node][1]+0.25])
+            elif G[i].nodes[node]["class"] == "soup":
+                axes[i].imshow(soup_image, extent=[pos[node][0]-0.20, pos[node][0]+0.20, pos[node][1]-0.20, pos[node][1]+0.20])
+
+        nx.draw_networkx_edges(G[i], pos, ax=axes[i], width=1.0, alpha=0.9, edge_color="gray")
 
     # record the object pairs
     output = ""

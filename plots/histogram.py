@@ -56,7 +56,7 @@ def plot_histogram_question_frequency(responses_by_question:dict):
 
 
 # plot a histogram of the scores of users, across all rounds
-def plot_histogram_score_all_rounds(responses_by_user_and_round:dict, category:str="user wrt full"):
+def plot_histogram_score_all_rounds(responses_by_user_and_round:dict, category:str="user wrt full", save=False):
     scores = []
     for user in responses_by_user_and_round:
         user_scores = []
@@ -88,7 +88,14 @@ def plot_histogram_score_all_rounds(responses_by_user_and_round:dict, category:s
             continue
         scores.append(sum(user_scores) / len(user_scores))
 
-    make_histogram(raw_values=scores, title=title, y_label="Count", y_max=8, x_label="Score", x_max=1, x_tick_frequency=0.1)
+    if save:
+        matplotlib.pyplot.gcf().set_dpi(1500)
+
+    make_histogram(raw_values=scores, title=title if not save else "", y_label="Count", y_max=8, x_label=("Mean Score for Each User" if not save else "Mean " + title.replace("Scores", "Score")) + "\n[0-1, higher is better]", x_max=1, x_tick_frequency=0.1, x_proportion=True)
+    
+    if save:
+        matplotlib.pyplot.gcf().tight_layout()
+        matplotlib.pyplot.savefig(title.replace(".", "") + ".svg", bbox_inches='tight', transparent="True", pad_inches=0)
     matplotlib.pyplot.show()
 
 # plot a histogram of the scores of users, for each round
@@ -140,7 +147,7 @@ def plot_histogram_score_each_round(responses_by_user_and_round:dict, category:s
     matplotlib.pyplot.show()
 
 # base histogram
-def make_histogram(frequencies={}, raw_values=[], title="", y_label="", x_label="", y_max=None, x_max=None, x_tick_frequency=None, ax=None):
+def make_histogram(frequencies={}, raw_values=[], title="", y_label="", x_label="", y_max=None, x_max=None, x_tick_frequency=None, ax=None, x_proportion=False):
     if raw_values == [] and frequencies == {}:
         raise ValueError("Either frequencies or raw values need to be defined.")
     

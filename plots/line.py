@@ -27,8 +27,8 @@ def plot_line_matrix_scores_by_round(scores_by_user_and_round:dict, category=Non
         ax.set_xticks(ticks=[0, 1, 2, 3], labels=[1, 2, 3, 4])
         ax.set_xlim([-0.5, 3.5])
         ax.set_xlabel("Round")
-        ax.set_ylim([0, 4.5])
-        ax.set_yticks(ticks=[0, 1, 2, 3, 4])
+        ax.set_ylim([0, 6.5])
+        ax.set_yticks(ticks=[0, 1, 2, 3, 4, 5, 6])
         ax.set_ylabel("Score")
 
         ax.spines["top"].set_visible(False)  # remove spines
