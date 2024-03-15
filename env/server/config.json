@@ -43,6 +43,6 @@
         "order_bonus" : 2,
         "max_num_ingredients" : 3
     },
-    "visibility": "O",
-    "visibility_range": 4
+    "visibility": "D",
+    "visibility_range": 5
 }
