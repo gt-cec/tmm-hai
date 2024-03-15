@@ -44,5 +44,5 @@
         "max_num_ingredients" : 3
     },
     "visibility": "D",
-    "visibility_range": 5
+    "visibility_range": 4
 }
