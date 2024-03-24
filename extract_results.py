@@ -19,6 +19,8 @@ def main(visibility:str):
     for user in os.listdir(log_path):
         if ".txt" not in user: # ignore if this is not a text file
             continue
+        if user == "123.txt" or user == "124.txt":  # ignore Jack's tests
+            continue
         user = user.replace(".txt", "")  # remove the trailing .txt from the file name
         if user not in user_responses:  # ensure user is in the user responses
             user_responses[user] = {}
@@ -62,6 +64,7 @@ def main(visibility:str):
             structured_scores[user][round]["full wrt user"] = true_score_wrt_user
             structured_scores[user][round]["agent wrt user"] = agent_score_wrt_user
             structured_scores[user][round]["estimated wrt user"] = estimated_human_score_wrt_user
+            structured_scores[user][round]["num questions"] = num_questions
             
             # for each question in the responses
             for question in responses:

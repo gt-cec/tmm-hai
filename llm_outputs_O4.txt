@@ -1,0 +1,41 @@
+
+1|where is your teammate? make your best guess.|bottom left|Bottom left|1.0
+2|how many more soups can be made/delivered, including soups in-progress? make your best guess.|1-2 soups|3-4 soups|0|1
+3|is there at least one available tomato? make your best guess.|definite yes|Definite YES|1
+4|how full is the rightmost pot? make your best guess.|1-2 ingredients|1-2 ingredients|1|1
+5|how full is the rightmost pot? make your best guess.|3 ingredients (full/cooking)|3 ingredients (full/cooking)|1|1
+6|how many more soups can be made/delivered, including soups in-progress? make your best guess.|1-2 soups|1-2 soups|1
+7|where are you?|center|Top Right|0
+8|what is the rightmost pot's status? make your best guess.|empty|Empty|1|2
+9|is there at least one available onion? make your best guess.|definite yes|Likely NO|0
+10|where is your teammate? make your best guess.|bottom right|Bottom Right|1.0
+11|what is the leftmost pot's status? make your best guess.|1-2 ingredients|1-2 ingredients|1|3
+12|how many more soups can be made/delivered, including soups in-progress? make your best guess.|1-2 soups|3-4 soups|0
+13|where is the nearest available tomato? make your best guess.|left half|Center-ish|0
+14|how many more soups can be made/delivered, including soups in-progress? make your best guess.|3-4 soups|3-4 soups|1
+15|how full is the leftmost pot? make your best guess.|empty|Empty|1|4
+16|where is the nearest available onion? make your best guess.|left half|Left half|1.0
+17|what is your teammate doing now? make your best guess.|getting dish for soup|Getting dish for soup|1
+18|where is your teammate? make your best guess.|center|Bottom Left|0
+19|is there at least one available onion? make your best guess.|definite yes|Definite YES|1
+20|where is your teammate? make your best guess.|center|Center or In-Between|1.0
+21|where is your teammate? make your best guess.|center|Center or In-Between|1|1
+22|where is the nearest available onion? make your best guess.|no idea|left half|0|1
+23|where is the nearest available tomato? make your best guess.|right half|right half|1.0|1
+24|how many more soups can be made/delivered, including soups in-progress? make your best guess.|1-2 soups|1-2 soups|1|1
+25|where are you?|top right|bottom right|0.5|2
+26|where are you?|top left|Center or In-Between|0|2
+27|what is the leftmost pot's status? make your best guess.|empty|1-2 ingredients|0|2
+28|is there at least one available tomato? make your best guess.|definite yes|Definite YES|1|2
+29|how many more soups can be made/delivered, including soups in-progress? make your best guess.|1-2 soups|1-2 soups|1|2
+30|is there at least one available tomato? make your best guess.|definite yes|Definite YES|1|3
+31|is there at least one available tomato? make your best guess.|definite no|No idea|0|3
+32|what is the rightmost pot's status? make your best guess.|empty|Empty|1|3
+33|where are you?|bottom right|Bottom Right|1.0|3
+34|where are you?|bottom left|Center or In-Between|0|3
+35|where is the nearest available tomato? make your best guess.|right half|Left half|0|3
+36|how full is the rightmost pot? make your best guess.|3 ingredients (full/cooking)|1-2 ingredients|0|4
+37|how many more soups can be made/delivered, including soups in-progress? make your best guess.|3-4 soups|1-2 soups|0|4
+38|where are you?|center|bottom left|0|4
+39|where is your teammate? make your best guess.|bottom right|Top Right|0.5|4
+40|what is the rightmost pot's status? make your best guess.|empty|Cooking|0|4

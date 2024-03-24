@@ -39,8 +39,8 @@ def run_smm(user_id, round):
     # init models
     observed_model = smm.smm.SMM("predicates", visibility="O20", agent="A0")  # model that only uses observations, no updates
     true_model = smm.smm.SMM("predicates", visibility="O20", agent="A0")  # robot model with full observability, ground truth
-    agent_model = smm.smm.SMM("predicates", visibility="O4", agent="A0")  # robot model with partial observability
-    human_model = smm.smm.SMM("predicates", visibility=sys.argv[1], agent="A1")  # estimated human model with partial observability 
+    agent_model = smm.smm.SMM("predicates", visibility=sys.argv[1], agent="A0")  # robot model with partial observability
+    human_model = smm.smm.SMM("predicates", visibility="D2", agent="A1")  # estimated human model with partial observability 
 
     # init plot
     plt.show(block=False)
@@ -78,7 +78,7 @@ def run_smm(user_id, round):
         agent_model.update(true_belief_state, debug=False)
         agent_belief_state = agent_model.get_visible_belief_state()
         human_model.update(agent_belief_state, debug=False)
-        visualize(models=[observed_model, true_model, agent_model, human_model], titles=[("Raw Observations", "(direct plot of the world state)"), ("Full Observability Belief State", "(has access to all world state information)"), ("Robot's Partial Observability Belief State", "(only has access to local world state information)"), ("Estimated Human's Belief State", "(uses the robot's belief state to estimate the human agent's belief state)")], game_round=str(round))
+        visualize(models=[observed_model, true_model, agent_model, human_model], titles=[(r"Raw Observations ($O$)", "(current world state)"), (r"Full Observability Belief State ($\beta^{true}$)", "(oracle with all world state information)"), (r"Robot's Partial Observability Belief State ($\beta^{robot}$)", "(only access to local world state information)"), (r"Estimated Human's Belief State ($\beta^{pred}$)", r"(only access to robot's belief state $\beta^{robot}$)")], game_round=str(round))
 
     # keep the plot visible
     plt.show()
@@ -187,9 +187,9 @@ def visualize(models:list, titles:list, game_round:str="practice"):
             if object_from[0] == "A":  # agents do not have edges, only objects
                 continue
             # set the node edges
-            for object_to_and_weight in models[i].belief_state["objects"][object_from]["canUseWith"]:
-                if object_to_and_weight[1] > 0 and object_to_and_weight[0] in G[i].nodes:
-                    G[i].add_edge(object_from, object_to_and_weight[0], weight=object_to_and_weight[1])
+            for object_to in models[i].belief_state["objects"][object_from]["canUseWith"]:
+                if models[i].belief_state["objects"][object_from]["canUseWith"][object_to] > 0 and object_to in G[i].nodes:
+                    G[i].add_edge(object_from, object_to, weight=models[i].belief_state["objects"][object_from]["canUseWith"][object_to])
 
         # set the node colors by class
         node_colors = [get_color((models[i].belief_state["objects"][obj]["propertyOf"]["name"] if obj[0] == "O" else obj)) for obj in G[i].nodes]
@@ -280,17 +280,19 @@ def visualize(models:list, titles:list, game_round:str="practice"):
     output = ""
     for object_from in models[i].belief_state["objects"]:
         object_from_encoding = get_object_encoding(models[i].belief_state, object_from)
-        for object_to_and_weight in models[i].belief_state["objects"][object_from]["canUseWith"]:
-            object_to = object_to_and_weight[0]
+        for object_to in models[i].belief_state["objects"][object_from]["canUseWith"]:
             object_to_encoding = get_object_encoding(models[i].belief_state, object_to)
-            edge_weight = object_to_and_weight[1]
+            edge_weight = models[i].belief_state["objects"][object_from]["canUseWith"][object_to]
             output += ",".join(object_from_encoding) + "," + ",".join(object_to_encoding) + "," + str(edge_weight) + "\n"
 
-    with open("./dataset.txt", "a+") as f:
-        f.write(output)
+    # add arrows between axes
+    arrowprops = dict(arrowstyle="->", mutation_scale=30, linewidth=2, color='#fc4b36')
+    plt.annotate('', xy=(-0.01, .5), xycoords=axes[1].transAxes, xytext=(1.01, .5), textcoords=axes[0].transAxes, arrowprops=arrowprops)
+    # plt.annotate('', xy=(1.01, 1.01), xycoords=axes[2].transAxes, xytext=(-0.01, -0.01), textcoords=axes[1].transAxes, arrowprops=arrowprops)
+    plt.annotate('', xy=(-0.01, .5), xycoords=axes[3].transAxes, xytext=(1.01, .5), textcoords=axes[2].transAxes, arrowprops=arrowprops)
 
     # display the plot
     plt.pause(0.1)
 
 if __name__ == "__main__":
-    run_smm("5f52e45ad408d55fa156aa21", 1)
+    run_smm("5e2c9026f4a3052be159c494", 1)

@@ -1,24 +1,36 @@
 import matplotlib
 import numpy
+import math
 
 cmap = matplotlib.cm.Wistia  # color map, this should be set at some point 
 
-def plot_violin_scores_by_round(scores_by_user_and_round:dict, category=None):
+def plot_violin_scores_by_round(scores_by_user_and_round:dict, category=None, responses=None, visibility=None):
     if category is None:  # check if category exists
         raise ValueError("Category must be specified!")
 
-    if category not in ["user wrt full", "full wrt user", "robot wrt full", "robot wrt user", "human wrt full", "human wrt user"]:  # check if category is valid
+    score_category = category  # TODO: change the score dict to have the same categories as the responses dict!
+    if category == "human wrt user":
+        score_category = "estimated wrt user"
+    elif category == "robot wrt full":
+        score_category = "agent wrt full"
+    elif category not in ["user wrt full", "full wrt user", "agent wrt full", "robot wrt user", "human wrt full", "human wrt user"]:  # check if category is valid
         raise ValueError("Category is not valid!")
 
     # format the scores as {round : [user1 score, user2 score, ...]}
     scores = {}
     for user in scores_by_user_and_round:
         for round in scores_by_user_and_round[user]:
+            if len(responses[user][round]) == 0:
+                continue
             if round not in scores:  # add the round to the dict if it is not already there
                 scores[round] = []
-            scores[round].append(scores_by_user_and_round[user][round][category])  # the category is which score w.r.t. which model is used
+            num_questions = len(responses[user][round]) if len(responses[user][round]) >= scores_by_user_and_round[user][round][score_category] else math.ceil(scores_by_user_and_round[user][round][score_category])
+            scores[round].append(scores_by_user_and_round[user][round][score_category] / num_questions)  # the category is which score w.r.t. which model is used
 
     scores = [scores[x] for x in scores]
+    
+
+    print("Violins: Num users", len(scores_by_user_and_round))
 
     ax = matplotlib.pyplot.subplot(111)
     parts = ax.violinplot(scores, showmedians=True, showextrema=False)
@@ -30,14 +42,18 @@ def plot_violin_scores_by_round(scores_by_user_and_round:dict, category=None):
     for partname in ['cmedians']:  # set the violin median colors
         vp = parts[partname]
         vp.set_edgecolor('white')
+        vp.set_linewidth(3)
 
-    ax.set_title("User Scores at Each Round")
+    if category == "user wrt full":
+        ax.set_title("User Scores at Each Round")
+    elif category == "robot wrt full":
+        ax.set_title("Robot Scores w.r.t. Ground Truth at Each Round\n(Visibility: " + visibility + ")")
 
-    ax.set_xticks(ticks=[1, 2, 3, 4], labels=["Round 1", "Round 2", "Round 3", "Round 4"])
+    ax.set_xticks(ticks=[1, 2, 3, 4], labels=["Layout 1", "Layout 2", "Layout 3", "Layout 4"])
     ax.tick_params(axis='x', which='both', bottom=False, top=False)
     ax.set_xlim([0.5, 4.5])
 
-    ax.set_yticks(ticks=[0, 1, 2, 3, 4, 5, 6], )
+    ax.set_yticks(ticks=[0, .25, .5, .75, 1.0], labels=["0%", "25%", "50%", "75%", "100%"])
     ax.set_ylabel("User Score")
 
     ax.spines["top"].set_visible(False)
