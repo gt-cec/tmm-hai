@@ -1,0 +1,19 @@
+name: Mirror Branch to ISYE
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Push to Mirror Repository
+        run: |
+          git remote add mirror git@github.com:isye-web/tmm_hai_cec
+          git push mirror production
