@@ -27,9 +27,9 @@ class SMMPredicates:
         for row_idx in range(len(layout)):
             for col_idx in range(len(layout[0])):
                 if layout[row_idx][col_idx] == "P":  # pot
-                    self.update_object(None, {"position": [col_idx, row_idx], "propertyOf": {"name": "pot"}}, new_object=True)
+                    self.update_object(None, {"position": (col_idx, row_idx), "propertyOf": {"name": "pot"}}, new_object=True)
                 if layout[row_idx][col_idx] == "S":  # station
-                    self.update_object(None, {"position": [col_idx, row_idx], "propertyOf": {"name": "station"}}, new_object=True)
+                    self.update_object(None, {"position": (col_idx, row_idx), "propertyOf": {"name": "station"}}, new_object=True)
         return
 
     # gets an ingredient list from an object
@@ -45,6 +45,10 @@ class SMMPredicates:
     # determines whether an object is on a pot spot
     def on_pot(self, object_id):
         return len([x for x in self.domain_knowledge["objects"] if self.domain_knowledge["objects"][x]["propertyOf"]["name"] == "pot" and self.domain_knowledge["objects"][x]["position"] == self.domain_knowledge["objects"][object_id]["position"]]) > 0
+
+    # determines whether an object is on a soup spot
+    def on_soup(self, object_id):
+        return len([x for x in self.domain_knowledge["objects"] if self.domain_knowledge["objects"][x]["propertyOf"]["name"] == "soup" and self.domain_knowledge["objects"][x]["position"] == self.domain_knowledge["objects"][object_id]["position"]]) > 0
 
     # determines the agent's goal from the state
     def predict_goal(self, state, agent_id=0):
@@ -122,7 +126,7 @@ class SMMPredicates:
         if subject[0] == "O":
             # add object if object has not been seen yet
             if subject not in self.domain_knowledge["objects"]:
-                self.domain_knowledge["objects"][subject] = {"position":"(-1,-1)", "contains":[], "canUseWith":[], "visible":True, "propertyOf":{}}
+                self.domain_knowledge["objects"][subject] = {"position":"(-1,-1)", "contains":[], "canUseWith":{}, "visible":True, "propertyOf":{}}
             # at: update location (x,y)
             if function == "position":
                 self.domain_knowledge["objects"][subject]["position"] = attribute
@@ -142,8 +146,8 @@ class SMMPredicates:
                 self.domain_knowledge["objects"][subject]["propertyOf"][attribute[0]] = attribute[1]
             # canUseWith: update dictionary of obj:usability [0-1]
             if function == "canUseWith":
-                if attribute not in self.domain_knowledge["objects"][subject]["canUseWith"]:
-                    self.domain_knowledge["objects"][subject]["canUseWith"].append(attribute)
+                self.domain_knowledge["objects"][subject]["canUseWith"][attribute[0]] = attribute[1]
+                
             pass
 
 
@@ -208,30 +212,28 @@ class SMMPredicates:
                     self.updatePredicate("canUseWith", object_from, [object_to, 0])
                 # ingredients can be used on unfilled pots
                 elif self.domain_knowledge["objects"][object_from]["propertyOf"]["name"] in ["onion", "tomato"] and \
-                     self.domain_knowledge["objects"][object_to]["propertyOf"]["name"] == "pot" and \
-                     not self.domain_knowledge["objects"][object_to]["propertyOf"]["isCooking"] and \
-                     not self.domain_knowledge["objects"][object_to]["propertyOf"]["isReady"] and \
-                     not self.domain_knowledge["objects"][object_to]["propertyOf"]["isIdle"]:
-                    self.updatePredicate("canUseWith", object_from, [object_to, 1])
-                # dished can be used on filled pots
-                elif self.domain_knowledge["objects"][object_from]["propertyOf"]["name"] == "soup" and \
-                     len(self.get_ingredient_list(object_from)) == 0 and \
                      self.domain_knowledge["objects"][object_to]["propertyOf"]["name"] == "soup" and \
-                     not self.domain_knowledge["objects"][object_to]["propertyOf"]["isCooking"] and \
-                     self.domain_knowledge["objects"][object_to]["propertyOf"]["isReady"] and \
-                     self.on_pot(object_to):
-                    self.updatePredicate("canUseWith", object_from, [object_to, 1])
-                    if debug:
-                        print("Dish can be used with pot", object_from, object_to)
+                     len(self.get_ingredient_list(object_to)) < 3:
+                        self.updatePredicate("canUseWith", object_from, [object_to, 1])
                 # soups can be used on stations
                 elif self.domain_knowledge["objects"][object_from]["propertyOf"]["name"] == "soup" and \
                      len(self.get_ingredient_list(object_from)) == 3 and \
                      self.domain_knowledge["objects"][object_from]["propertyOf"]["isReady"] and \
                      self.domain_knowledge["objects"][object_to]["propertyOf"]["name"] == "station":
                     self.updatePredicate("canUseWith", object_from, [object_to, 1])
-                    if debug:
-                        print("Soup can be used with station", object_from, object_to)
-
+                # ingredients can be used on empty pots
+                elif self.domain_knowledge["objects"][object_from]["propertyOf"]["name"] in ["onion", "tomato"] and \
+                     self.domain_knowledge["objects"][object_to]["propertyOf"]["name"] == "pot" and \
+                     not self.on_soup(object_to):
+                        self.updatePredicate("canUseWith", object_from, [object_to, 1])
+                # dishes can be used on filled pots
+                elif self.domain_knowledge["objects"][object_from]["propertyOf"]["name"] == "dish" and \
+                     len(self.get_ingredient_list(object_from)) == 0 and \
+                     self.domain_knowledge["objects"][object_to]["propertyOf"]["name"] == "soup" and \
+                     self.domain_knowledge["objects"][object_to]["propertyOf"]["isReady"] and \
+                     self.on_pot(object_to):
+                    self.updatePredicate("canUseWith", object_from, [object_to, 1])
+                
                 # by default, cannot use
                 else:
                     self.updatePredicate("canUseWith", object_from, [object_to, 0])
@@ -269,7 +271,7 @@ class SMMPredicates:
             print("[Start] Seen Objects:", [objects[o]["propertyOf"]["name"] + (":" + "+".join([x["propertyOf"]["name"] for x in objects[o]["propertyOf"]["ingredients"]]) if "ingredients" in objects[o]["propertyOf"] else "") + " at " + str(objects[o]["position"]) for o in objects])
             print("[Start] Known Objects:", [known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
         if len(str([known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects]).split("soup")) > 2:
-            # print("[DEBUG] Known Objects:", [k + " " + known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
+        #     # print("[DEBUG] Known Objects:", [k + " " + known_objects[k]["propertyOf"]["title"] + " at " + str(known_objects[k]["position"]) for k in known_objects])
             pass
 
         soups_delta_ingredients = {}  # soups that have stayed in the same location but now have ingredients to be assigned

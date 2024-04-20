@@ -69,7 +69,7 @@ if __name__ == "__main__":
     # plots.line.plot_line_scores_by_visibility(dict_of_scores_by_user_and_round=dict_of_scores_by_user_and_round, dict_of_responses=dict_of_responses, category="human wrt user")
 
     ### plot the violin plot of performances at each round
-    plots.violin.plot_violin_scores_by_round(scores_by_user_and_round, category="robot wrt full", responses=responses_by_user_and_round, visibility=visibility)
+    plots.violin.plot_violin_scores_by_round(scores_by_user_and_round, category="agent wrt user", responses=responses_by_user_and_round, visibility=visibility)
 
     ### plot the question frequency histogram
     # plots.histogram.plot_histogram_question_frequency(responses_by_question)

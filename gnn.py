@@ -4,7 +4,7 @@ from sklearn.metrics import mean_squared_error
 import numpy as np
 
 # load the dataset
-data = np.loadtxt('./dataset.txt', delimiter=',')
+# data = np.loadtxt('./dataset.txt', delimiter=',')
 
 # parameters
 num_class = 250

@@ -13,7 +13,7 @@ def plot_violin_scores_by_round(scores_by_user_and_round:dict, category=None, re
         score_category = "estimated wrt user"
     elif category == "robot wrt full":
         score_category = "agent wrt full"
-    elif category not in ["user wrt full", "full wrt user", "agent wrt full", "robot wrt user", "human wrt full", "human wrt user"]:  # check if category is valid
+    elif category not in ["user wrt full", "full wrt user", "agent wrt full", "agent wrt user", "human wrt full", "human wrt user"]:  # check if category is valid
         raise ValueError("Category is not valid!")
 
     # format the scores as {round : [user1 score, user2 score, ...]}
@@ -48,13 +48,21 @@ def plot_violin_scores_by_round(scores_by_user_and_round:dict, category=None, re
         ax.set_title("User Scores at Each Round")
     elif category == "robot wrt full":
         ax.set_title("Robot Scores w.r.t. Ground Truth at Each Round\n(Visibility: " + visibility + ")")
+    elif category == "agent wrt user":
+        ax.set_title("Robot Scores w.r.t. Predicted User Belief State at Each Round\n(Robot Visibility: " + visibility + ")")
 
     ax.set_xticks(ticks=[1, 2, 3, 4], labels=["Layout 1", "Layout 2", "Layout 3", "Layout 4"])
     ax.tick_params(axis='x', which='both', bottom=False, top=False)
     ax.set_xlim([0.5, 4.5])
 
     ax.set_yticks(ticks=[0, .25, .5, .75, 1.0], labels=["0%", "25%", "50%", "75%", "100%"])
-    ax.set_ylabel("User Score")
+
+    if category == "user wrt full":
+        ax.set_ylabel("User Score")
+    elif category == "robot wrt full":
+        ax.set_ylabel("Robot Score")
+    elif category == "agent wrt user":
+        ax.set_ylabel("Robot Score")
 
     ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
