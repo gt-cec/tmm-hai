@@ -14,8 +14,6 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Push to Mirror Repository
-        env:
-          PAT: ${{ secrets.ISYE_REPO_PAT }}
         run: |
-          git remote add mirror https://jkolb6:${{ secrets.TARGET_REPO_PAT }}@github.com:isye-web/tmm_hai_cec
+          git remote add mirror https://jkolb6:${{ secrets.ISYE_REPO_PAT }}@github.gatech.edu/isye-web/tmm_hai_cec
           git push mirror production
