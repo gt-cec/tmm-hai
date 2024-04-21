@@ -24,9 +24,7 @@ jobs:
       - name: Add the ISYE repository as a mirror
         run: |
           cd ${{ github.event.repository.name }}
-          echo ${{ vars.ISYE_MIRROR_USER }}
-          echo ${{ vars.ISYE_MIRROR_REPO }}
-          git remote add mirror https://jkolb6:${{ secrets.ISYE_MIRROR_TOKEN }}@github.com/isye-web/tmm_hai_cec
+          git remote add mirror https://${{ vars.ISYE_MIRROR_USER }}:${{ secrets.ISYE_MIRROR_TOKEN }}@${{ vars.ISYE_MIRROR_REPO }}
           git fetch --force mirror
 
       - name: Remove the .github folder to avoid a recursive workflow
