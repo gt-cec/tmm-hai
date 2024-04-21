@@ -16,4 +16,4 @@ jobs:
       - name: Push to Mirror Repository
         run: |
           git remote add mirror https://jkolb6:${{ secrets.ISYE_REPO_PAT }}@github.gatech.edu/isye-web/tmm_hai_cec
-          git push mirror production
+          git push mirror main --force
