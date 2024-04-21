@@ -11,16 +11,12 @@ jobs:
 
     steps:
       - name: Clone CEC repo
-        run: |
-          git clone ${{ github.server_url }}/${{ github.repository }}
-          cd ${{ github.event.repository.name }}
-          git switch production
+        run: git clone --branch production ${{ github.server_url }}/${{ github.repository }}
 
-      - name: Add ISYE repository as an upstream
+      - name: Add ISYE repo as an upstream remote
         run: |
           cd ${{ github.event.repository.name }}
-          git remote add mirror https://${{ vars.ISYE_MIRROR_USER }}:${{ secrets.ISYE_MIRROR_TOKEN }}@${{ vars.ISYE_MIRROR_REPO }} 
-          git fetch --force mirror
+          git remote add mirror https://${{ vars.ISYE_MIRROR_USER }}:${{ secrets.ISYE_MIRROR_TOKEN }}@${{ vars.ISYE_MIRROR_REPO }}
 
       - name: Remove the .github folder to avoid a recursive workflow
         run: |
