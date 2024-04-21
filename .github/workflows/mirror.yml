@@ -24,6 +24,8 @@ jobs:
       - name: Add the ISYE repository as a mirror
         run: |
           cd ${{ github.event.repository.name }}
+          echo ${ISYE_MIRROR_USER}
+          echo ${{ ISYE_MIRROR_USER }}
           git remote add mirror https://${ISYE_MIRROR_USER}:${{ secrets.ISYE_MIRROR_TOKEN }}@${ISYE_MIRROR_REPO}
           git fetch --force mirror
 
