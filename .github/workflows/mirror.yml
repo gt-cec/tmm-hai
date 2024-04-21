@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Pull CEC repo
         run: |
-          git clone https://github.com/${{ github.event.repository }}
+          git clone https://${{ github.server_url }}/${{ github.repository }}
 
       - name: Update CEC repository
         run: |
