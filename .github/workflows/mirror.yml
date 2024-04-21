@@ -12,37 +12,34 @@ jobs:
     steps:
       - name: Pull CEC repo
         run: |
-          git clone https://github.com/gt-cec/tmm-hai
-          ls
-          cd tmm-hai
-          ls
+          git clone https://github.com/${{ github.event.repository }}
 
       - name: Update CEC repository
         run: |
-          cd tmm-hai
+          cd ${{ github.event.repository.name }}
           git switch production
           git fetch --force origin
           git pull
 
       - name: Add the ISYE repository as a mirror
         run: |
-          cd tmm-hai
+          cd ${{ github.event.repository.name }}
           git remote add mirror https://jkolb6:${{ secrets.ISYE_MIRROR_TOKEN }}@github.gatech.edu/isye-web/tmm_hai_cec
           git fetch --force mirror
 
       - name: Remove the .github folder to avoid a recursive workflow
         run: |
-          cd tmm-hai
+          cd ${{ github.event.repository.name }}
           rm -rf .github
 
       - name: Commit the change
         run: |
-          cd tmm-hai
+          cd ${{ github.event.repository.name }}
           git config --global user.email ""
           git config --global user.name "GitHub Actions"
           git commit -a -m "[GitHub Action] Synced with CEC parent repo"
 
       - name: Push to the ISYE main branch
         run: |
-          cd tmm-hai
+          cd ${{ github.event.repository.name }}
           git push mirror production --force
