@@ -17,8 +17,8 @@ jobs:
         run: |
           git switch production
           rm -rf .github
-          git config --global user.email "none@github.com"
+          git config --global user.email ""
           git config --global user.name "GitHub Actions"
-          git commit -a -m "[GitHub Action] removed mirror.yml"
+          git commit -a -m "[GitHub Action] Synced with CEC main repo @ github.com/gt-cec"
           git remote add mirror https://jkolb6:${{ secrets.ISYE_REPO_PAT }}@github.gatech.edu/isye-web/tmm_hai_cec
           git push mirror production --force
