@@ -34,4 +34,4 @@ jobs:
           git commit -a -m "[GitHub Action] Synced with CEC parent repo"
 
       - name: Push to the ISYE main branch
-        run: git push mirror production:main --force
+        run: git push mirror production --force
