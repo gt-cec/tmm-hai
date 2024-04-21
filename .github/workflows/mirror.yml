@@ -42,4 +42,4 @@ jobs:
       - name: Push to the ISYE main branch
         run: |
           cd ${{ github.event.repository.name }}
-          git push mirror production --force
+          git push mirror production:main --force
