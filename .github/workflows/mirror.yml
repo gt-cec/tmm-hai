@@ -15,6 +15,7 @@ jobs:
 
       - name: Push to Mirror Repository
         run: |
+          git switch production
           rm -rf .github
           git config --global user.email "none@github.com"
           git config --global user.name "GitHub Actions"
