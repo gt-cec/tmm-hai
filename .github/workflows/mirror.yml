@@ -16,6 +16,8 @@ jobs:
       - name: Push to Mirror Repository
         run: |
           rm -rf .github
+          git config --global user.email "none@github.com"
+          git config --global user.name "GitHub Actions"
           git commit -m "[GitHub Action] removed mirror.yml"
           git remote add mirror https://jkolb6:${{ secrets.ISYE_REPO_PAT }}@github.gatech.edu/isye-web/tmm_hai_cec
-          git push mirror production
+          git push mirror production --force
