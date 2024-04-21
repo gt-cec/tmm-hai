@@ -13,15 +13,10 @@ jobs:
       - name: Clone CEC repo
         run: |
           git clone ${{ github.server_url }}/${{ github.repository }}
-
-      - name: Update CEC repository
-        run: |
           cd ${{ github.event.repository.name }}
           git switch production
-          git fetch --force origin
-          git pull
 
-      - name: Add the ISYE repository as a mirror
+      - name: Add ISYE repository as an upstream
         run: |
           cd ${{ github.event.repository.name }}
           git remote add mirror https://${{ vars.ISYE_MIRROR_USER }}:${{ secrets.ISYE_MIRROR_TOKEN }}@${{ vars.ISYE_MIRROR_REPO }} 
@@ -39,7 +34,7 @@ jobs:
           git config --global user.name "GitHub Actions"
           git commit -a -m "[GitHub Action] Synced with CEC parent repo"
 
-      - name: Push to the ISYE main branch
+      - name: Push CEC production branch to ISYE main branch
         run: |
           cd ${{ github.event.repository.name }}
           git push mirror production:main --force
