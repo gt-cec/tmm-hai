@@ -10,10 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout CEC repository
-        uses: actions/checkout@v3
-        with:
-          sparse-checkout-cone-mode: false
+      - name: Pull CEC repo
+        run: |
+          git clone https://github.com/gt-cec/tmm-hai
+          ls
+          cd tmm-hai
+          ls
 
       - name: Update CEC repository
         run: |
