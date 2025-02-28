@@ -2,6 +2,10 @@
 
 This repository contains project code, data, and analysis used for our paper *Inferring Belief States in Partially-Observable Human-Robot Teams*, presented at IROS 2024.
 
+### Demonstration
+
+https://github.com/user-attachments/assets/a8be14bc-b4e4-43b9-b500-89e4fc503370
+
 ### Citation
 
 If you use this code or a derivative of it, please cite the following paper:
