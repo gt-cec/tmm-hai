@@ -48,8 +48,8 @@ if __name__ == "__main__":
         visibility = sys.argv[1]
 
     ### LLM vs LP Plot
-    LLM_O4_mean, LLM_O4_variance, LLM_O9_mean, LLM_O9_variance, LP_O4_mean, LP_O4_variance, LP_O9_mean, LP_O9_variance = llm.process_llm_results()
-    plots.bar.plot_bar_model_performance(LLM_O4_mean, LLM_O4_variance, LLM_O9_mean, LLM_O9_variance, LP_O4_mean, LP_O4_variance, LP_O9_mean, LP_O9_variance)
+    # LLM_O4_mean, LLM_O4_variance, LLM_O9_mean, LLM_O9_variance, LP_O4_mean, LP_O4_variance, LP_O9_mean, LP_O9_variance = llm.process_llm_results()
+    # plots.bar.plot_bar_model_performance(LLM_O4_mean, LLM_O4_variance, LLM_O9_mean, LLM_O9_variance, LP_O4_mean, LP_O4_variance, LP_O9_mean, LP_O9_variance)
 
     # load the data
     # dict_of_scores_by_user_and_round = {}
@@ -62,13 +62,13 @@ if __name__ == "__main__":
     responses_by_round, responses_by_user, responses_by_user_and_round, responses_by_question, scores_by_user_and_round = load_data(visibility=visibility)
 
     ### plot the line graph of user performance over each round
-    plots.line.plot_line_matrix_scores_by_round(scores_by_user_and_round, category="user wrt full")
+    # plots.line.plot_line_matrix_scores_by_round(scores_by_user_and_round, category="user wrt full")
 
     ### plot the line graph of the scores by the visibility type (X) and round (Y)
     # plots.line.plot_line_scores_by_visibility(dict_of_scores_by_user_and_round=dict_of_scores_by_user_and_round, dict_of_responses=dict_of_responses, category="human wrt user")
 
     ### plot the violin plot of performances at each round
-    plots.violin.plot_violin_scores_by_round(scores_by_user_and_round, category="agent wrt user", responses=responses_by_user_and_round, visibility=visibility)
+    # plots.violin.plot_violin_scores_by_round(scores_by_user_and_round, category="agent wrt user", responses=responses_by_user_and_round, visibility=visibility)
 
     ### plot the question frequency histogram
     plots.histogram.plot_histogram_question_frequency(responses_by_question)

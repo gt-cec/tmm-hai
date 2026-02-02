@@ -13,6 +13,8 @@ def plot_histogram_question_frequency(responses_by_question:dict):
 
     data = sa_level_1 | sa_level_2
 
+    print(data)
+
     x = data.values()
 
     ax = matplotlib.pyplot.subplot(111)
